@@ -1,0 +1,87 @@
+name: deepvac-hub
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: licensing
+      POSTGRES_PASSWORD: licensing
+      POSTGRES_DB: licensing
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U licensing -d licensing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    env_file: .env
+    environment:
+      APP_ENV: development
+    volumes:
+      - ./secrets:/run/secrets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/v1/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    env_file: .env
+    environment:
+      APP_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+      - web
+
+  # Not started by `docker compose up`; used for one-off commands, e.g.:
+  #   docker compose run --rm tools alembic upgrade head
+  #   docker compose run --rm tools python scripts/create_admin.py
+  #   docker compose run --rm tools python scripts/seed_development.py
+  #   docker compose run --rm tools pytest
+  #   docker compose run --rm tools ruff check .
+  #   docker compose run --rm tools mypy src
+  tools:
+    build:
+      context: .
+      dockerfile: docker/tools.Dockerfile
+    profiles: ["tools"]
+    env_file: .env
+    environment:
+      APP_ENV: test
+    volumes:
+      - ./secrets:/run/secrets:ro
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

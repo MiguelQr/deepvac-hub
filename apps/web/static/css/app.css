@@ -1,0 +1,128 @@
+/* Minimal, self-contained local styling -- no CDN dependency, per the
+   spec's "Bootstrap or similarly simple local styling" requirement. */
+
+:root {
+    color-scheme: dark;
+    --bg: #0b1020;
+    --panel: #111827;
+    --border: #253247;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #2563eb;
+    --accent-hover: #60a5fa;
+    --danger: #ff6f7d;
+    --success: #8bd66f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.brand { font-weight: 700; }
+
+.page {
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    width: 100%;
+    max-width: 640px;
+}
+
+.card.narrow { max-width: 420px; }
+
+h1 { font-size: 1.3rem; margin: 0 0 16px; }
+
+label {
+    display: block;
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+input, select {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: #0f172a;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-hover);
+}
+
+button.primary {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+.link-button {
+    background: none;
+    border: none;
+    color: var(--accent-hover);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.muted { color: var(--muted); }
+
+.alert {
+    background: rgba(255, 111, 125, 0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+.alert.success {
+    background: rgba(139, 214, 111, 0.1);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.user-code {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-align: center;
+    padding: 10px;
+    margin: 8px 0 18px;
+    background: #0f172a;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+}
+
+.logout-form { display: inline; }

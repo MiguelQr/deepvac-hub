@@ -1,0 +1,34 @@
+{% extends "shared/base.html" %}
+{% block title %}Activate device — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card narrow">
+    <h1>Activate a device</h1>
+
+    {% if approved %}
+        <p class="alert success">
+            Activation approved. Return to the desktop app — it will finish
+            activating automatically within a few seconds.
+        </p>
+    {% else %}
+        <p class="muted">Code from the desktop app:</p>
+        <p class="user-code">{{ user_code or "—" }}</p>
+
+        {% if error %}<p class="alert">{{ error }}</p>{% endif %}
+
+        {% if organizations %}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="user_code" value="{{ user_code }}">
+            <label>Activate under organization
+                <select name="organization_id" required>
+                    {% for org in organizations %}
+                    <option value="{{ org.id }}">{{ org.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button type="submit" class="primary">Approve activation</button>
+        </form>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

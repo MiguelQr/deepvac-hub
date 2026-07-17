@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "licensing"
+version = "0.1.0"
+description = "deepvac-insight cloud licensing control plane — shared domain package"
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy>=2.0.35",
+    "alembic>=1.13.2",
+    "psycopg[binary]>=3.2.1",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.2",
+    "cryptography>=43.0.1",
+    "argon2-cffi>=23.1.0",
+]
+
+[project.optional-dependencies]
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.6",
+]
+web = [
+    "flask>=3.0.3",
+    "flask-wtf>=1.2.1",
+    "gunicorn>=23.0.0",
+]
+dev = [
+    "pytest>=8.3.2",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.27.2",
+    "ruff>=0.6.8",
+    "mypy>=1.11.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/licensing"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "apps", "tests", "scripts"]
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Body"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+packages = ["licensing"]
+strict = true
+ignore_missing_imports = true
