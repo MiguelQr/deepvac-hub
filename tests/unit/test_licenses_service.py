@@ -57,18 +57,6 @@ def test_create_license_rejects_expiry_before_start(db_session) -> None:  # type
         )
 
 
-def test_suspend_license_requires_vendor_write(db_session) -> None:  # type: ignore[no-untyped-def]
-    org = make_organization(db_session)
-    product, edition = make_product_and_edition(db_session)
-    license_ = make_license(db_session, organization=org, product=product, edition=edition)
-    org_admin = make_user(db_session)
-    make_membership(
-        db_session, organization=org, user=org_admin, role=MembershipRole.ORGANIZATION_ADMIN
-    )
-    with pytest.raises(PermissionDeniedError):
-        licenses_service.suspend_license(db_session, actor=org_admin, license_id=license_.id)
-
-
 def test_assign_seat_requires_org_admin(db_session) -> None:  # type: ignore[no-untyped-def]
     org = make_organization(db_session)
     product, edition = make_product_and_edition(db_session)
@@ -110,14 +98,3 @@ def test_assign_seat_succeeds_for_org_member(db_session) -> None:  # type: ignor
         db_session, actor=admin, license_id=license_.id, user_email="member@example.com"
     )
     assert seat.user_id == member.id
-
-
-def test_renew_license_requires_positive_days(db_session) -> None:  # type: ignore[no-untyped-def]
-    org = make_organization(db_session)
-    product, edition = make_product_and_edition(db_session)
-    license_ = make_license(db_session, organization=org, product=product, edition=edition)
-    admin = make_vendor_super_admin(db_session)
-    with pytest.raises(ConflictError):
-        licenses_service.renew_license(
-            db_session, actor=admin, license_id=license_.id, extend_days=0
-        )

@@ -25,9 +25,10 @@
             {{ form.expires_at() }}
             {% for e in form.expires_at.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
         </label>
-        <label>Offline validity (days)
+        <label>Certificate validity (days)
             {{ form.offline_validity_days() }}
             {% for e in form.offline_validity_days.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+            <span class="muted">How long an activated device's signed certificate stays valid from issuance. Defaults to effectively lifetime — this product has no renewal flow.</span>
         </label>
         <button type="submit" class="btn btn-primary">Create license</button>
     </form>

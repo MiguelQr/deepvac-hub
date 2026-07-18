@@ -208,6 +208,8 @@ erDiagram
 * `activation_requests.user_code_hash` — the raw user code is never persisted,
   only its hash (Argon2id or HMAC-SHA256 with a server pepper); lookups hash
   the presented code and compare.
-* `refresh_challenges.nonce_hash` — nonce itself is returned to the client once
-  and never stored in plaintext; single-use enforced by `consumed_at IS NULL`
-  condition in the `UPDATE ... WHERE consumed_at IS NULL RETURNING` renewal query.
+* `refresh_challenges` — unused: this table exists in the schema from an
+  earlier design draft that planned a renewal flow. That flow was dropped
+  before being built (licenses are lifetime grants — see
+  `docs/threat-model.md`), so no code ever writes to this table. Left in
+  place as inert scaffolding rather than migrated out.

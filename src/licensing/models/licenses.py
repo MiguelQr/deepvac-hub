@@ -45,7 +45,12 @@ class OrganizationLicense(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     device_limit_per_user: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    offline_validity_days: Mapped[int] = mapped_column(Integer, nullable=False, default=14)
+    offline_validity_days: Mapped[int] = mapped_column(Integer, nullable=False, default=36500)
+    """Certificate validity window from issuance, independent of this
+    license's own expires_at (see services/issuance.py). Defaults to
+    ~100 years: licenses in this product are lifetime grants with no
+    renewal flow, so this is intentionally not a short check-in interval
+    -- an admin can still set a shorter value per-license if ever needed."""
 
     seat_assignments: Mapped[list[LicenseSeatAssignment]] = relationship(
         back_populates="organization_license"

@@ -32,7 +32,7 @@ flowchart TB
         CExp[Experiment storage/sharing/annotations]
     end
 
-    Desktop -- "activation, renewal: identity + device key only" --> Cloud
+    Desktop -- "activation: identity + device key only" --> Cloud
     Exp -. never sent .-> Cloud
     Desktop -. "experiment collaboration, future phase" .-> FutureHub
 ```

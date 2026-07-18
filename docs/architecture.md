@@ -2,7 +2,9 @@
 
 `hub` is the **vendor cloud licensing control plane** for the deepvac-insight desktop
 application. It is strictly scoped to identity, organizations, seats, device
-activation, and cryptographic license issuance/renewal/revocation.
+activation, and cryptographic license issuance. Licenses are lifetime grants
+issued once at activation — there is no renewal or revocation flow (a
+deliberate product decision; see `docs/threat-model.md`).
 
 It is **not**, and must never become in this phase, an experiment-data platform. See
 [privacy.md](privacy.md) for the enforced boundary.
@@ -79,7 +81,7 @@ producer) without changing router/view code.
    parsing, auth dependency wiring, status codes, template rendering. No SQL,
    no crypto, no business rules.
 2. `src/licensing/services/*` — use-case orchestration (activation, seat
-   assignment, renewal). Owns transactions.
+   assignment, org/user/license management). Owns transactions.
 3. `src/licensing/repositories/*` — SQLAlchemy queries only, no business rules.
 4. `src/licensing/security/*` — Argon2id hashing, Ed25519 signing/verification,
    constant-time comparisons. No knowledge of HTTP or DB.

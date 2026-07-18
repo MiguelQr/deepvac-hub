@@ -214,7 +214,7 @@ def seed_demo_organization(session) -> None:  # type: ignore[no-untyped-def]
             device_limit_per_user=3,
             starts_at=now,
             expires_at=now + timedelta(days=365),
-            offline_validity_days=14,
+            offline_validity_days=36500,  # lifetime grant; see README's Phase D notes
         )
         session.add(org_license)
         session.flush()

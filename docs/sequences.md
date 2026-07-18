@@ -40,29 +40,19 @@ Key properties: the user code is single-use and short-lived; the browser
 session used for approval is never handed to the desktop app — only a signed
 license certificate is returned.
 
-## Silent license renewal
+## No renewal flow (by design)
 
-```mermaid
-sequenceDiagram
-    participant D as Desktop App
-    participant A as api (FastAPI)
-    participant DB as PostgreSQL
+Licenses in this product are lifetime grants: `complete_activation` issues a
+certificate valid for `OrganizationLicense.offline_validity_days` (defaults
+to ~100 years — see README.md's Phase D notes), and the desktop app
+(`insight`) never calls back for a fresh one. There is deliberately no
+challenge-response renewal endpoint and no device revoke/replace endpoint —
+an earlier design draft of this doc described one; it was dropped before
+being built once the product decision landed on "lifetime license per
+organization, no renewal or revocation." `refresh_challenges` remains in the
+schema as inert, unused scaffolding rather than being migrated out.
 
-    D->>A: POST /api/v1/licenses/refresh/challenge {device_id}
-    A->>DB: INSERT refresh_challenges (nonce_hash, expires_at)
-    A-->>D: {challenge_id, nonce, expires_at}
-    D->>D: Sign nonce with device Ed25519 private key
-    D->>A: POST /api/v1/licenses/refresh {challenge_id, device_id, signature}
-    A->>DB: Load challenge, verify not expired/not consumed
-    A->>DB: Load device_activations, verify status=active, load public key
-    A->>A: Verify signature over nonce using stored device public key
-    A->>DB: UPDATE refresh_challenges SET consumed_at=now() WHERE consumed_at IS NULL (single-use guard)
-    A->>DB: Verify user active, membership active, seat active, org license active/not expired
-    A->>A: Build fresh canonical payload (new issued_at/expires_at), sign
-    A->>DB: INSERT issued_license_certificates, UPDATE device_activations.last_renewed_at
-    A-->>D: {license_payload, signature, key_id}
-```
-
-No password or browser interaction is required for renewal — trust is rooted
-in proof of possession of the device private key plus live server-side status
-checks.
+The practical consequence, stated plainly: once a device activates, there is
+no live channel for the vendor to revoke that device's access before its
+certificate's own `expires_at` (effectively never, given the default). See
+`docs/threat-model.md` threat #13 for the accepted risk this implies.

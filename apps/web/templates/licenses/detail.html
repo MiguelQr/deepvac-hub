@@ -6,39 +6,7 @@
     <p><strong>Organization:</strong> <a href="{{ url_for('organizations.detail', organization_id=license.organization_id) }}">{{ license.organization.name }}</a></p>
     <p><strong>Seat limit:</strong> {{ license.seat_limit }} &middot; <strong>Device limit / user:</strong> {{ license.device_limit_per_user }}</p>
     <p><strong>Starts:</strong> {{ license.starts_at.strftime('%Y-%m-%d') }} &middot; <strong>Expires:</strong> {{ license.expires_at.strftime('%Y-%m-%d') }}</p>
-    <p><strong>Offline validity:</strong> {{ license.offline_validity_days }} days</p>
-
-    {% if can_write %}
-    <div class="section">
-        <h2>Actions</h2>
-        <div class="button-row">
-            {% if license.status.value == 'active' %}
-            <form method="post" action="{{ url_for('licenses.suspend', license_id=license.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-secondary">Suspend</button>
-            </form>
-            {% elif license.status.value == 'suspended' %}
-            <form method="post" action="{{ url_for('licenses.reactivate', license_id=license.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-secondary">Reactivate</button>
-            </form>
-            {% endif %}
-            {% if license.status.value != 'revoked' %}
-            <form method="post" action="{{ url_for('licenses.revoke', license_id=license.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-danger">Revoke</button>
-            </form>
-            {% endif %}
-        </div>
-        {% if license.status.value != 'revoked' %}
-        <form method="post" action="{{ url_for('licenses.renew', license_id=license.id) }}" class="button-row">
-            {{ renew_form.hidden_tag() }}
-            {{ renew_form.extend_days() }}
-            <button type="submit" class="btn btn-primary">Renew</button>
-        </form>
-        {% endif %}
-    </div>
-    {% endif %}
+    <p><strong>Certificate validity from issuance:</strong> {{ license.offline_validity_days }} days</p>
 
     <div class="section">
         <h2>Seats</h2>

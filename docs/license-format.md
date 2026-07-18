@@ -62,17 +62,19 @@ strings.
 ## Field trust rules
 
 * `product_code`, `edition_code`, `features`, `organization_id`, `device_id`
-  are **never taken from client input** at issuance/renewal time — they are
-  derived server-side from the authenticated device activation, its
-  organization license, and the edition's granted features at the moment of
-  signing.
+  are **never taken from client input** at issuance time — they are derived
+  server-side from the authenticated device activation, its organization
+  license, and the edition's granted features at the moment of signing.
+  Issuance happens exactly once, at activation completion — there is no
+  renewal call that re-derives/re-signs these later (licenses are lifetime
+  grants; see `docs/threat-model.md`).
 * `device_public_key_hash` is SHA-256 of the exact public key bytes stored in
   `device_activations.device_public_key` — binding the certificate to one
   registered device.
-* Clients only ever supply: the activation user code (during activation), the
-  device public key (once, at registration), and challenge signatures
-  (during renewal). None of these influence payload field values directly;
-  they gate *whether* a payload is issued and *which* device it is bound to.
+* Clients only ever supply: the activation user code (during activation) and
+  the device public key (once, at registration). Neither influences payload
+  field values directly; they gate *whether* a payload is issued and *which*
+  device it is bound to.
 
 ## Verification (desktop side, and test suite)
 

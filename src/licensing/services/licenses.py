@@ -1,5 +1,11 @@
-"""Organization license lifecycle, plus the license-scoped seat and
+"""Organization license creation, plus the license-scoped seat and
 certificate views used by the licenses/organizations blueprints.
+
+Licenses in this product are lifetime grants: there is no suspend/revoke/
+renew lifecycle (deliberately dropped -- see README.md's Phase D notes).
+Once created, a license's only state is what's set at creation time; the
+issued device certificates (services/issuance.py) carry their own long
+validity window independent of this record.
 
 Seat assignment delegates its locking/limit logic to services/seats.py
 rather than duplicating it -- this module only adds the membership
@@ -10,7 +16,7 @@ and authorization.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -83,62 +89,6 @@ def list_licenses_for_org(
             .order_by(OrganizationLicense.created_at.desc())
         ).scalars()
     )
-
-
-def _transition(
-    session: Session,
-    *,
-    actor: User,
-    license_id: uuid.UUID,
-    new_status: OrganizationLicenseStatus,
-) -> OrganizationLicense:
-    auth_service.require_vendor(actor, write=True)
-    license_ = session.get(OrganizationLicense, license_id)
-    if license_ is None:
-        raise NotFoundError(f"License {license_id} not found.")
-    license_.status = new_status
-    session.flush()
-    return license_
-
-
-def suspend_license(session: Session, *, actor: User, license_id: uuid.UUID) -> OrganizationLicense:
-    return _transition(
-        session, actor=actor, license_id=license_id, new_status=OrganizationLicenseStatus.SUSPENDED
-    )
-
-
-def reactivate_license(
-    session: Session, *, actor: User, license_id: uuid.UUID
-) -> OrganizationLicense:
-    return _transition(
-        session, actor=actor, license_id=license_id, new_status=OrganizationLicenseStatus.ACTIVE
-    )
-
-
-def revoke_license(session: Session, *, actor: User, license_id: uuid.UUID) -> OrganizationLicense:
-    return _transition(
-        session, actor=actor, license_id=license_id, new_status=OrganizationLicenseStatus.REVOKED
-    )
-
-
-def renew_license(
-    session: Session, *, actor: User, license_id: uuid.UUID, extend_days: int
-) -> OrganizationLicense:
-    auth_service.require_vendor(actor, write=True)
-    if extend_days <= 0:
-        raise ConflictError("Extension must be a positive number of days.")
-    license_ = session.get(OrganizationLicense, license_id)
-    if license_ is None:
-        raise NotFoundError(f"License {license_id} not found.")
-    base = max(license_.expires_at, datetime.now(UTC))
-    license_.expires_at = base + timedelta(days=extend_days)
-    if license_.status in (
-        OrganizationLicenseStatus.EXPIRED,
-        OrganizationLicenseStatus.PENDING,
-    ):
-        license_.status = OrganizationLicenseStatus.ACTIVE
-    session.flush()
-    return license_
 
 
 def list_seats_for_license(

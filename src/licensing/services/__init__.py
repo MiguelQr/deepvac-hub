@@ -1,5 +1,6 @@
-"""Service modules (use-case orchestration) land here starting Phase B:
-auth.py, organizations.py, seats.py, activation.py, renewal.py, devices.py.
-Phase A intentionally ships only the models/crypto these will depend on —
-see README.md phase plan.
+"""Service modules (use-case orchestration): auth.py (authorization),
+organizations.py, users.py, licenses.py, dashboard.py, seats.py,
+activation.py, devices.py, issuance.py, signing_keys.py. No renewal.py --
+licenses are lifetime grants issued once at activation, with no renewal
+flow (see README.md's Phase D notes and docs/threat-model.md).
 """

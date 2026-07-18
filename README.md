@@ -47,26 +47,31 @@ hub/
 | POST | `/activations` | none (rate-limited) | start activation, returns user code + verification URL | D |
 | GET | `/activations/{id}` | none (rate-limited) | poll status; does not leak unrelated org/user existence | D |
 | POST | `/activations/{id}/complete` | activation must be `approved` | submit device public key, receive signed license | D |
-| POST | `/licenses/refresh/challenge` | device_id known | issue single-use renewal nonce | E |
-| POST | `/licenses/refresh` | Ed25519 signature over nonce | verify + reissue signed license | E |
-| GET | `/organizations/{org_id}/devices` | management session, org-scoped | list org devices | D/E |
-| POST | `/devices/{device_id}/revoke` | management session, org-scoped | revoke device | E |
-| POST | `/devices/{device_id}/replace` | management session, org-scoped | mark replaced, allow new activation | E |
 | GET | `/licensing/public-keys` | none | active + still-needed retired public keys | A/D |
+
+Phase D is the FastAPI surface's final state: licenses are lifetime grants
+issued once at `/activations/{id}/complete`, so there is deliberately no
+renewal endpoint (`/licenses/refresh*`) and no device management endpoint
+(`GET /organizations/{org_id}/devices`, `/devices/{id}/revoke`,
+`/devices/{id}/replace`) — see "Phase D scope" below and
+`docs/threat-model.md`.
 
 ## Flask management-portal page map (`web`)
 
 | Section | Routes (indicative) | Phase |
 |---|---|---|
 | Auth | `/login`, `/logout`, `/account/password` | B |
-| Dashboard | `/` — orgs, licenses, seats, devices, activity, expiring, security events | C |
-| Organizations | `/organizations`, `/organizations/new`, `/organizations/<id>` (edit/disable/memberships/licenses/devices/audit) | C |
+| Dashboard | `/` — orgs, licenses, seats, devices, expiring soon | C |
+| Organizations | `/organizations`, `/organizations/new`, `/organizations/<id>` (edit/disable/memberships/licenses/devices) | C |
 | Users | `/users`, `/users/new`, `/users/<id>` (disable/reactivate/reset-password/memberships/seats/devices/security) | C |
-| Licenses | `/organizations/<id>/licenses/new`, `/licenses/<id>` (suspend/revoke/renew/certificates) | C |
+| Licenses | `/organizations/<id>/licenses/new`, `/licenses/<id>` (read-only overview, seats, certificates) | C |
 | Seats | `/licenses/<id>/seats` (assign/remove) | C |
-| Devices | `/organizations/<id>/devices`, `/devices/<id>` (revoke/replace) | D/E |
+| Devices | read-only, inline on organization/user detail pages | C |
 | Signing keys | `/signing-keys` (read-only metadata; generation is CLI-only) | A/F |
 | Audit | `/audit` (filter by date/org/user/event/target) | F |
+
+No standalone `/devices` page and no suspend/revoke/renew actions on
+licenses: see "Phase D scope" below for why.
 
 ## Sequence diagrams
 
@@ -93,7 +98,13 @@ malicious clients, and the honest limits of offline enforcement. Full table:
 
 This repo is built in the vertical phases specified for this project:
 **A** foundation → **B** management auth → **C** orgs/licenses/seats
-→ **D** activation → **E** renewal/revocation → **F** hardening.
+→ **D** activation → **F** hardening.
+
+**Phase E (renewal/revocation) is deliberately dropped, not deferred.**
+Licenses in this product are lifetime grants for an organization and
+everyone in it — not subscriptions — so there is no periodic renewal
+check-in and no device revoke/replace flow. See "Phase D scope" below and
+`docs/threat-model.md` for what that trades away.
 
 ### Phase A scope
 
@@ -188,18 +199,19 @@ caches a verified license under `data/license/`. See `../insight/README.md`
   `docs/threat-model.md` threat #9.
 * `src/licensing/services/{organizations,users,licenses,dashboard}.py` —
   organization lifecycle and membership management, the vendor-managed user
-  directory, license lifecycle (create/suspend/reactivate/revoke/renew) plus
-  org-scoped seat assignment (delegates locking to the existing
-  `services/seats.py`), and dashboard summary counts.
+  directory, license creation plus org-scoped seat assignment (delegates
+  locking to the existing `services/seats.py`), and dashboard summary
+  counts. (Originally this also had suspend/reactivate/revoke/renew license
+  actions; removed in Phase D once licenses became lifetime grants — see
+  "Phase D scope" below.)
 * `apps/web/{dashboard,organizations,users,licenses}/` — the rest of the
   admin portal: dashboard (vendor-only summary + licenses expiring soon),
   organizations (list/create/detail with memberships/licenses/devices
   sections), users (vendor-only directory, disable/reactivate/password
-  reset/vendor-role grant), licenses (create under an org, suspend/
-  reactivate/revoke/renew, seat assign/remove, read-only certificate list).
-  `vendor_support` gets read-only access everywhere; write actions require
-  `vendor_super_admin` or (for org-scoped actions) that org's
-  `organization_admin`.
+  reset/vendor-role grant), licenses (create under an org, seat
+  assign/remove, read-only certificate list). `vendor_support` gets
+  read-only access everywhere; write actions require `vendor_super_admin`
+  or (for org-scoped actions) that org's `organization_admin`.
 * `apps/web/auth/` — `/account/password` self-service change added; login
   converted to a `FlaskForm`; session gains a sliding idle timeout
   (`SESSION_IDLE_TIMEOUT_MINUTES`, default 60) on top of the existing 8h
@@ -216,10 +228,8 @@ caches a verified license under `data/license/`. See `../insight/README.md`
   membership/seat lifecycle changes) via the existing `licensing.audit.record_event`
   and its metadata allow-list, which already covered everything needed with
   no changes.
-* Deliberately deferred to later phases: the filterable `/audit` page
-  (Phase F) — org/user detail pages surface no audit data in the meantime —
-  and device revoke/replace (Phase E), so org/user detail pages list devices
-  read-only.
+* Deliberately deferred to Phase F: the filterable `/audit` page — org/user
+  detail pages surface no audit data in the meantime.
 * Tests: `tests/factories.py` (shared builders), a `flask_client` fixture
   (joins the Flask app's session to the same per-test transactional
   connection as `db_session` via SQLAlchemy's `join_transaction_mode="create_savepoint"`,
@@ -227,3 +237,55 @@ caches a verified license under `data/license/`. See `../insight/README.md`
   unit tests per new service, integration tests per new blueprint, and
   `tests/security/test_cross_org_access.py` — the explicit cross-org/role
   enforcement test threat #9 calls for.
+
+### Phase D scope
+
+Device-code activation itself (`POST /activations`, `GET /activations/{id}`,
+`POST /activations/{id}/complete`, `GET /licensing/public-keys`) already
+shipped as part of the Phase A/D pull-forward (see above) — Phase D's
+remaining work was a product decision and its consequences, prompted by
+re-auditing the sibling `../insight` desktop client for protocol
+compatibility:
+
+* **Compatibility audit result: no drift.** Insight's
+  `app/services/licensing_client.py` was read end-to-end against this repo's
+  actual FastAPI schemas/routes — request/response field names, the
+  base64url device-key encoding, the canonical-JSON signing bytes
+  (`sort_keys=True, separators=(",", ":")`), the `REQUIRED_PAYLOAD_KEYS`
+  set, the activation status vocabulary (`pending/approved/denied/expired/consumed`),
+  and the `{"detail": "..."}` error shape all match exactly. Insight also
+  already has **zero** client code calling any renewal or device-revoke
+  endpoint — confirming the "no Phase E" decision below doesn't remove
+  anything the desktop app was relying on.
+* **Licenses are lifetime grants, not subscriptions.** A device's issued
+  certificate is valid for `OrganizationLicense.offline_validity_days` from
+  issuance (default **36500 days, ~100 years** — was 14, sized for a
+  renewal flow that's being dropped instead of built).
+  `Settings.default_license_validity_days` (the fallback used if that field
+  is ever falsy) was bumped the same way, so no code path can produce a
+  short-lived certificate. This is a one-line-default change, not a
+  formula change: certificate expiry is still `issued_at + offline_validity_days`,
+  independent of the organization license's own `expires_at` — a lifetime
+  grant shouldn't retroactively shrink if an admin later edits the license
+  record.
+* **Phase E (renewal/revocation) dropped, and so is the suspend/revoke/renew
+  UI Phase C had added for organization licenses.** With lifetime
+  certificates and no live check-in from the desktop app, a suspend/revoke
+  action can only ever block *new* activations — it cannot pull back access
+  already granted to an activated device, since insight never calls
+  anything that would let it learn about that. Given that, the actions were
+  removed rather than kept as a UI that implies more control than actually
+  exists; a license's status is now set once at creation and read-only
+  after. `apps/api/routers/devices.py` (a stub since Phase A, never
+  implemented) was deleted outright — nothing calls it or ever would.
+* `docs/threat-model.md`, `docs/sequences.md`, `docs/architecture.md`,
+  `docs/database-erd.md`, and `docs/license-format.md` were updated to
+  match — several threat mitigations previously described a renewal
+  challenge-response flow as the enforcement backstop; those are rewritten
+  to describe the actual (narrower) protection this system provides now,
+  including the accepted residual risk: copying both `license.json` and
+  the device's local private-key file clones a working install with no
+  remote way to cut it off. `refresh_challenges` (table) and
+  `RefreshChallenge` (model) are kept as inert, never-written schema rather
+  than migrated out — same treatment as the now-unused
+  `OrganizationLicenseStatus.SUSPENDED`/`REVOKED` enum values.

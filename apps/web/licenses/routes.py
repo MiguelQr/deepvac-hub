@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from apps.web.audit import log_event
 from apps.web.auth.session import load_current_user, login_required, vendor_required
-from apps.web.licenses.forms import AssignSeatForm, LicenseForm, RenewForm
+from apps.web.licenses.forms import AssignSeatForm, LicenseForm
 from licensing.database import get_scoped_session
 from licensing.exceptions import (
     ConflictError,
@@ -94,105 +94,16 @@ def detail(license_id: uuid.UUID):
     certificates = licenses_service.list_certificates_for_license(
         db, actor=user, license_id=license_id
     )
-    can_write = auth_service.can_vendor_write(user)
     can_admin = auth_service.can_org_admin(db, user, license_.organization_id)
     seat_form = AssignSeatForm()
-    renew_form = RenewForm()
     return render_template(
         "licenses/detail.html",
         license=license_,
         seats=seats,
         certificates=certificates,
-        can_write=can_write,
         can_admin=can_admin,
         seat_form=seat_form,
-        renew_form=renew_form,
     )
-
-
-def _transition(license_id: uuid.UUID, *, service_fn, event_type: str, message: str):  # type: ignore[no-untyped-def]
-    db = get_scoped_session()
-    user = load_current_user()
-    try:
-        service_fn(db, actor=user, license_id=license_id)
-        log_event(
-            db,
-            event_type=event_type,
-            actor_user_id=user.id,
-            target_type="organization_license",
-            target_id=str(license_id),
-        )
-        db.commit()
-        flash(message, "success")
-    except LicensingError as exc:
-        db.rollback()
-        flash(str(exc), "error")
-    return redirect(url_for("licenses.detail", license_id=license_id))
-
-
-@bp.route("/licenses/<uuid:license_id>/suspend", methods=["POST"])
-@login_required
-@vendor_required(write=True)
-def suspend(license_id: uuid.UUID):
-    return _transition(
-        license_id,
-        service_fn=licenses_service.suspend_license,
-        event_type="license_suspended",
-        message="License suspended.",
-    )
-
-
-@bp.route("/licenses/<uuid:license_id>/reactivate", methods=["POST"])
-@login_required
-@vendor_required(write=True)
-def reactivate(license_id: uuid.UUID):
-    return _transition(
-        license_id,
-        service_fn=licenses_service.reactivate_license,
-        event_type="license_reactivated",
-        message="License reactivated.",
-    )
-
-
-@bp.route("/licenses/<uuid:license_id>/revoke", methods=["POST"])
-@login_required
-@vendor_required(write=True)
-def revoke(license_id: uuid.UUID):
-    return _transition(
-        license_id,
-        service_fn=licenses_service.revoke_license,
-        event_type="license_revoked",
-        message="License revoked.",
-    )
-
-
-@bp.route("/licenses/<uuid:license_id>/renew", methods=["POST"])
-@login_required
-@vendor_required(write=True)
-def renew(license_id: uuid.UUID):
-    db = get_scoped_session()
-    user = load_current_user()
-    form = RenewForm()
-    if form.validate_on_submit():
-        try:
-            licenses_service.renew_license(
-                db, actor=user, license_id=license_id, extend_days=form.extend_days.data
-            )
-            log_event(
-                db,
-                event_type="license_renewed",
-                actor_user_id=user.id,
-                target_type="organization_license",
-                target_id=str(license_id),
-            )
-            db.commit()
-            flash("License renewed.", "success")
-        except LicensingError as exc:
-            db.rollback()
-            flash(str(exc), "error")
-    else:
-        _flash_form_errors(form)
-    return redirect(url_for("licenses.detail", license_id=license_id))
 
 
 @bp.route("/licenses/<uuid:license_id>/seats", methods=["POST"])

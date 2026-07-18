@@ -11,11 +11,7 @@ from tests.factories import (
     make_vendor_super_admin,
 )
 
-from licensing.models.enums import (
-    MembershipRole,
-    OrganizationLicenseStatus,
-    SeatAssignmentStatus,
-)
+from licensing.models.enums import MembershipRole, SeatAssignmentStatus
 from licensing.models.licenses import LicenseSeatAssignment, OrganizationLicense
 from licensing.models.users import User
 
@@ -52,24 +48,6 @@ def test_vendor_can_create_license(flask_client, db_session) -> None:  # type: i
         .one()
     )
     assert license_.seat_limit == 10
-
-
-def test_vendor_can_suspend_and_reactivate_license(flask_client, db_session) -> None:  # type: ignore[no-untyped-def]
-    admin = make_vendor_super_admin(db_session)
-    org = make_organization(db_session)
-    product, edition = make_product_and_edition(db_session)
-    license_ = make_license(db_session, organization=org, product=product, edition=edition)
-    _login_as(flask_client, admin)
-
-    response = flask_client.post(f"/licenses/{license_.id}/suspend", follow_redirects=False)
-    assert response.status_code == 302
-    db_session.refresh(license_)
-    assert license_.status == OrganizationLicenseStatus.SUSPENDED
-
-    response = flask_client.post(f"/licenses/{license_.id}/reactivate", follow_redirects=False)
-    assert response.status_code == 302
-    db_session.refresh(license_)
-    assert license_.status == OrganizationLicenseStatus.ACTIVE
 
 
 def test_org_admin_can_assign_and_remove_seat(flask_client, db_session) -> None:  # type: ignore[no-untyped-def]

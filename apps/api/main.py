@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.error_handlers import register_exception_handlers
 from apps.api.middleware import correlation_id_and_access_log
-from apps.api.routers import activation, devices, health, licenses
+from apps.api.routers import activation, health, licenses
 from licensing.config import get_settings
 
 logging.basicConfig(level=get_settings().log_level)
@@ -52,7 +52,6 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(activation.router, prefix="/api/v1")
     app.include_router(licenses.router, prefix="/api/v1")
-    app.include_router(devices.router, prefix="/api/v1")
 
     return app
 

@@ -42,11 +42,8 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
     activation_ttl_seconds: int = Field(default=600, alias="ACTIVATION_TTL_SECONDS")
-    refresh_challenge_ttl_seconds: int = Field(
-        default=120, alias="REFRESH_CHALLENGE_TTL_SECONDS"
-    )
     default_license_validity_days: int = Field(
-        default=365, alias="DEFAULT_LICENSE_VALIDITY_DAYS"
+        default=36500, alias="DEFAULT_LICENSE_VALIDITY_DAYS"
     )
 
     @field_validator("app_env")

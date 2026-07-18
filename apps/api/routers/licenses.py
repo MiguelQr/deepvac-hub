@@ -1,5 +1,9 @@
-"""Public signing keys (GET /licensing/public-keys). License refresh
-(challenge/response) lands in Phase E -- see README.md phase plan.
+"""Public signing keys (GET /licensing/public-keys).
+
+This is the only license-related endpoint on this API. Licenses in this
+product are lifetime grants issued once at activation (see
+apps/api/routers/activation.py) -- there is no refresh/renewal endpoint,
+deliberately: see README.md's Phase D notes.
 """
 
 from __future__ import annotations

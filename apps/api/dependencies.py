@@ -1,8 +1,10 @@
 """FastAPI dependency providers. Thin wiring only — no business logic.
 
-Management-authenticated endpoints (device revoke/replace/list) will get a
-`require_management_session` dependency in Phase C/D once the session
-mechanism shared with apps/web is implemented.
+No management-authenticated endpoints exist on this API: device inventory
+and lifecycle are entirely handled by apps/web (the admin portal, which
+queries the database directly) since licenses in this product are lifetime
+grants with no device revoke/replace/renewal flow -- see README.md's Phase D
+notes. This API is desktop-facing only (activation + public keys).
 """
 
 from __future__ import annotations

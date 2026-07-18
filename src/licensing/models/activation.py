@@ -51,7 +51,10 @@ class ActivationRequest(UUIDPrimaryKeyMixin, Base):
 
 
 class RefreshChallenge(UUIDPrimaryKeyMixin, Base):
-    """Short-lived, single-use nonce for device-signature license renewal."""
+    """Unused. Scaffolding for a device-signature license-renewal flow that
+    was never built: licenses are lifetime grants issued once at
+    activation, with no renewal (see README.md's Phase D notes and
+    docs/threat-model.md). No code writes to this table."""
 
     __tablename__ = "refresh_challenges"
 

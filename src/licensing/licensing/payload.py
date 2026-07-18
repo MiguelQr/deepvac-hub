@@ -1,7 +1,8 @@
 """Builds the trusted, canonical license payload dict for signing.
 
 This is the single place where a license payload is assembled from
-server-side truth. Callers (activation/renewal services) pass only values
+server-side truth. Called once, at activation completion (no renewal
+service exists -- licenses are lifetime grants). Callers pass only values
 already validated against the database in the same transaction — never raw
 client input. See docs/license-format.md "Field trust rules".
 """

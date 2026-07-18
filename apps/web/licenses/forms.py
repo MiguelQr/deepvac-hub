@@ -18,15 +18,11 @@ class LicenseForm(FlaskForm):
         "Expires at", format="%Y-%m-%dT%H:%M", validators=[DataRequired()]
     )
     offline_validity_days = IntegerField(
-        "Offline validity (days)", default=14, validators=[DataRequired(), NumberRange(min=1)]
+        "Certificate validity (days)",
+        default=36500,
+        validators=[DataRequired(), NumberRange(min=1)],
     )
 
 
 class AssignSeatForm(FlaskForm):
     email = StringField("Member email", validators=[DataRequired(), Email()])
-
-
-class RenewForm(FlaskForm):
-    extend_days = IntegerField(
-        "Extend by (days)", default=365, validators=[DataRequired(), NumberRange(min=1)]
-    )
