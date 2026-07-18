@@ -4,8 +4,9 @@ activation user codes and refresh-challenge nonces.
 Argon2id is deliberately NOT used here: these values are high-entropy,
 server-generated random tokens (not user-chosen passwords), looked up at
 high frequency during polling. Argon2id's intentional slowness would be a
-self-inflicted denial-of-service; the actual defenses are token entropy,
-short TTL, and rate limiting (see docs/threat-model.md #4).
+self-inflicted denial-of-service; the actual defenses are token entropy and
+short TTL (see docs/threat-model.md #4 -- request rate limiting is not
+currently implemented).
 """
 
 from __future__ import annotations

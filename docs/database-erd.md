@@ -187,15 +187,18 @@ erDiagram
   every active member of its organization to the product/edition, enforced
   by an org-membership check at activation time (`services/activation.py`),
   not a count against any limit. `device_limit_per_user` is the only
-  per-user cap, and it's enforced transactionally (see below), not via a
-  claim/allocation table.
+  per-user cap, not via a claim/allocation table.
 * `device_activations.device_public_key_hash` — globally unique; a device key
   can never be registered twice, satisfying the "duplicate device key" threat.
-* `device_activations` — active-device-count-per-user enforced transactionally
-  against `organization_licenses.device_limit_per_user`.
-* `activation_requests.user_code_hash` — the raw user code is never persisted,
-  only its hash (Argon2id or HMAC-SHA256 with a server pepper); lookups hash
-  the presented code and compare.
+* `device_activations` — active-device-count-per-user is checked against
+  `organization_licenses.device_limit_per_user` in `services/devices.py`,
+  but that check is **not** row-locked the way seat enforcement used to be
+  — two concurrent activations for the same user could both pass the count
+  check and both succeed, exceeding the limit by one in a true race. Known
+  gap, not currently guarded against.
+* `activation_requests.user_code_hash` — the raw user code is never
+  persisted, only its HMAC-SHA256 (server-pepper) hash; lookups hash the
+  presented code and compare.
 * `refresh_challenges` — unused: this table exists in the schema from an
   earlier design draft that planned a renewal flow. That flow was dropped
   before being built (licenses are lifetime grants — see

@@ -26,23 +26,18 @@ flowchart LR
     API -. private key read-only .-> SEC
 ```
 
-**Product decision (post-Phase-D): licenses are lifetime grants, not
-subscriptions.** There is no renewal endpoint and no device revoke/replace
-endpoint — see README.md's Phase D notes. This is a deliberate scope cut,
-not a deferral, and it materially changes several threats below versus an
-earlier draft of this document that assumed a renewal flow would exist.
-Read threats #1, #7 (removed), #11, #12, and #13 with that in mind — they
-describe the *actual*, narrower protection this system provides now, not
-the stronger one a renewal-based design would have.
+Licenses in this product are lifetime grants, not subscriptions: there is
+no renewal endpoint and no device revoke/replace endpoint. That shapes
+threats #1, #11, #12, and #13 below — read them together.
 
 ## Threats and mitigations
 
 | # | Threat | Mitigation |
 |---|--------|-----------|
-| 1 | Copying a license file (`license.json`) to another machine, without the device's private key | The payload is bound to `device_public_key_hash`; the desktop client recomputes this hash from its *local* private-key file and compares it before trusting the payload. A `license.json` copied alone (without `device_private_key.bin`) fails this check on the new machine, since a fresh install has no matching key. **If both files are copied together, the clone succeeds** — see #13, this is the accepted residual risk of dropping renewal/revocation. |
+| 1 | Copying a license file (`license.json`) to another machine, without the device's private key | The payload is bound to `device_public_key_hash`; the desktop client recomputes this hash from its *local* private-key file and compares it before trusting the payload. A `license.json` copied alone (without `device_private_key.bin`) fails this check on the new machine, since a fresh install has no matching key. **If both files are copied together, the clone succeeds** — see #13, this is the accepted residual risk of having no renewal/revocation flow. |
 | 2 | Copying a device public key onto another device's activation request | `device_public_key_hash` is globally unique in `device_activations` (DB constraint, see #3); a second activation attempting to register the same public key is rejected regardless of which physical device sent the request. |
-| 3 | Registering the same device key twice | DB unique constraint on `device_public_key_hash`; service layer returns a conflict error and audits the attempt. |
-| 4 | Activation-code guessing | User codes are high-entropy (e.g. 8+ alphanumeric chars from a restricted charset, ~1e12 space), short TTL (default 10 min), rate-limited attempts per IP and per activation_id, `attempt_count` tracked and requests locked after N failures, codes hashed at rest so a DB read doesn't reveal them. |
+| 3 | Registering the same device key twice | DB unique constraint on `device_public_key_hash`; service layer returns a conflict error. |
+| 4 | Activation-code guessing | User codes are high-entropy (8 alphanumeric chars from a restricted charset, ~1e12 space), short TTL (`ACTIVATION_TTL_SECONDS`, default 10 min), and hashed at rest (HMAC-SHA256 + server pepper) so a DB read doesn't reveal them. **Not implemented**: request rate limiting and the lockout-after-N-failures behavior implied by `activation_requests.attempt_count` — that column exists but nothing currently reads or writes it. Until rate limiting is added, this threat's mitigation rests on code entropy and TTL alone. |
 | 5 | Activation replay (reusing an approved/consumed request) | `activation_requests.status` transitions are one-way (pending→approved→consumed or denied/expired); the complete endpoint checks `status='approved' AND consumed_at IS NULL` and consumes atomically in the same transaction. |
 | 6 | License payload modification | Ed25519 signature over canonical bytes; any field change invalidates the signature. Verification is mandatory before the desktop trusts any field. |
 | 8 | Stolen administrator session | HttpOnly + Secure + SameSite cookies, session fixation prevented by rotating session ID at login, short session lifetime + idle timeout, CSRF tokens on state-changing forms, audit log of all admin actions to detect anomalous use, ability to force-disable an account. |
@@ -61,8 +56,8 @@ the stronger one a renewal-based design would have.
   the moment of activation. Entitlement itself is membership-based (any
   active member of the licensed organization qualifies) — there is no
   separate seat limit to enforce.
-* Make abuse patterns (many activation attempts, many devices) detectable
-  via audit events and rate limits, before an activation completes.
+* Audit every admin-portal write action and every approved activation, for
+  after-the-fact investigation.
 * Let a vendor stop *future* activations for an organization or user at
   any time (disable the account/membership).
 
