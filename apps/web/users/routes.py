@@ -82,7 +82,6 @@ def detail(user_id: uuid.UUID):
     user = load_current_user()
     target = users_service.get_user(db, actor=user, user_id=user_id)
     memberships = users_service.list_memberships_for_user(db, actor=user, user_id=user_id)
-    seats = users_service.list_seats_for_user(db, actor=user, user_id=user_id)
     devices = users_service.list_devices_for_user(db, actor=user, user_id=user_id)
     can_write = auth_service.can_vendor_write(user)
     password_form = SetPasswordForm()
@@ -90,7 +89,6 @@ def detail(user_id: uuid.UUID):
         "users/detail.html",
         target=target,
         memberships=memberships,
-        seats=seats,
         devices=devices,
         can_write=can_write,
         password_form=password_form,

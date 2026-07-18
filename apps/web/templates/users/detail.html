@@ -14,6 +14,7 @@
 
     <div class="section">
         <h2>Memberships</h2>
+        <p class="muted">Membership alone grants access to that organization's licensed products — see each organization's page for its licenses.</p>
         {% if memberships %}
         <table class="data">
             <thead><tr><th>Organization</th><th>Role</th></tr></thead>
@@ -28,26 +29,6 @@
         </table>
         {% else %}
         <p class="empty-state">Not a member of any organization.</p>
-        {% endif %}
-    </div>
-
-    <div class="section">
-        <h2>Seats</h2>
-        {% if seats %}
-        <table class="data">
-            <thead><tr><th>License</th><th>Organization</th><th>Assigned</th></tr></thead>
-            <tbody>
-            {% for seat in seats %}
-                <tr>
-                    <td><a href="{{ url_for('licenses.detail', license_id=seat.organization_license_id) }}">{{ seat.organization_license.product.code }} / {{ seat.organization_license.edition.name }}</a></td>
-                    <td>{{ seat.organization_license.organization.name }}</td>
-                    <td>{{ seat.assigned_at.strftime('%Y-%m-%d') }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="empty-state">No seats assigned.</p>
         {% endif %}
     </div>
 

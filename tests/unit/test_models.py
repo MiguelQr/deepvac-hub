@@ -13,10 +13,9 @@ from licensing.models.enums import (
     MembershipStatus,
     OrganizationLicenseStatus,
     OrganizationStatus,
-    SeatAssignmentStatus,
     UserStatus,
 )
-from licensing.models.licenses import LicenseSeatAssignment, OrganizationLicense
+from licensing.models.licenses import OrganizationLicense
 from licensing.models.organizations import Organization, OrganizationMembership
 from licensing.models.products import Edition, Product
 from licensing.models.users import User
@@ -51,7 +50,6 @@ def _make_license(  # type: ignore[no-untyped-def]
         product_id=product.id,
         edition_id=edition.id,
         status=OrganizationLicenseStatus.ACTIVE,
-        seat_limit=1,
         device_limit_per_user=3,
         starts_at=now,
         expires_at=now + timedelta(days=365),
@@ -133,33 +131,6 @@ def test_removed_membership_does_not_block_new_active_one(db_session) -> None:  
     db_session.flush()  # should not raise
 
 
-def test_duplicate_active_seat_assignment_rejected(db_session) -> None:  # type: ignore[no-untyped-def]
-    user = _make_user(db_session, f"{uuid.uuid4()}@example.com")
-    org = _make_org(db_session, f"org-{uuid.uuid4()}")
-    product, edition = _make_catalog(db_session)
-    lic = _make_license(db_session, org, product, edition)
-
-    db_session.add(
-        LicenseSeatAssignment(
-            organization_license_id=lic.id,
-            user_id=user.id,
-            status=SeatAssignmentStatus.ACTIVE,
-            assigned_by_user_id=user.id,
-        )
-    )
-    db_session.flush()
-    with pytest.raises(IntegrityError):
-        db_session.add(
-            LicenseSeatAssignment(
-                organization_license_id=lic.id,
-                user_id=user.id,
-                status=SeatAssignmentStatus.ACTIVE,
-                assigned_by_user_id=user.id,
-            )
-        )
-        db_session.flush()
-
-
 def test_duplicate_device_public_key_hash_rejected(db_session) -> None:  # type: ignore[no-untyped-def]
     user = _make_user(db_session, f"{uuid.uuid4()}@example.com")
     org = _make_org(db_session, f"org-{uuid.uuid4()}")
@@ -190,7 +161,7 @@ def test_duplicate_device_public_key_hash_rejected(db_session) -> None:  # type:
         db_session.flush()
 
 
-def test_organization_license_seat_limit_check_constraint(db_session) -> None:  # type: ignore[no-untyped-def]
+def test_organization_license_device_limit_check_constraint(db_session) -> None:  # type: ignore[no-untyped-def]
     org = _make_org(db_session, f"org-{uuid.uuid4()}")
     product, edition = _make_catalog(db_session)
     now = datetime.now(UTC)
@@ -201,10 +172,9 @@ def test_organization_license_seat_limit_check_constraint(db_session) -> None:  
                 product_id=product.id,
                 edition_id=edition.id,
                 status=OrganizationLicenseStatus.ACTIVE,
-                seat_limit=-1,
-                device_limit_per_user=3,
+                device_limit_per_user=0,
                 starts_at=now,
-                expires_at=now + timedelta(days=30),
+                expires_at=now + timedelta(days=365),
                 offline_validity_days=14,
             )
         )

@@ -102,13 +102,12 @@
         </div>
         {% if org_licenses %}
         <table class="data">
-            <thead><tr><th>Product / edition</th><th>Status</th><th>Seats</th><th>Expires</th></tr></thead>
+            <thead><tr><th>Product / edition</th><th>Status</th><th>Expires</th></tr></thead>
             <tbody>
             {% for license in org_licenses %}
                 <tr>
                     <td><a href="{{ url_for('licenses.detail', license_id=license.id) }}">{{ license.product.code }} / {{ license.edition.name }}</a></td>
                     <td><span class="badge status-{{ license.status.value }}">{{ license.status.value }}</span></td>
-                    <td>{{ license.seat_limit }}</td>
                     <td>{{ license.expires_at.strftime('%Y-%m-%d') }}</td>
                 </tr>
             {% endfor %}

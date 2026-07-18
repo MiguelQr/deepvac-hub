@@ -38,7 +38,6 @@ from licensing.security.signing import SignedEnvelope
 from licensing.security.tokens import generate_user_code, hash_lookup_token
 from licensing.services import devices as devices_service
 from licensing.services import issuance as issuance_service
-from licensing.services import seats as seats_service
 
 
 def start_activation(
@@ -204,13 +203,6 @@ def complete_activation(
 
     edition = session.get(Edition, org_license.edition_id)
     assert edition is not None
-
-    seats_service.ensure_seat_assigned(
-        session,
-        organization_license_id=org_license.id,
-        user_id=user.id,
-        assigned_by_user_id=user.id,
-    )
 
     device = devices_service.register_device(
         session,

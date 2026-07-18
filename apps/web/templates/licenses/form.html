@@ -3,15 +3,12 @@
 {% block content %}
 <div class="card narrow">
     <h1>New license</h1>
+    <p class="muted">Entitles every active member of this organization to the product/edition below — there's no per-user seat limit, so nothing to assign later.</p>
     <form method="post">
         {{ form.hidden_tag() }}
         <label>Product / edition
             {{ form.product_edition() }}
             {% for e in form.product_edition.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-        </label>
-        <label>Seat limit
-            {{ form.seat_limit() }}
-            {% for e in form.seat_limit.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
         </label>
         <label>Device limit per user
             {{ form.device_limit_per_user() }}

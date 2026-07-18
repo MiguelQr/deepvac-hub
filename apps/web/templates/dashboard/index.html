@@ -13,14 +13,6 @@
             <div class="label">Active licenses</div>
         </div>
         <div class="stat-card">
-            <div class="value">{{ summary.seats_used }}</div>
-            <div class="label">Seats used</div>
-        </div>
-        <div class="stat-card">
-            <div class="value">{{ summary.seats_available }}</div>
-            <div class="label">Seats available</div>
-        </div>
-        <div class="stat-card">
             <div class="value">{{ summary.active_devices }}</div>
             <div class="label">Active devices</div>
         </div>
@@ -30,7 +22,7 @@
         {% if summary.expiring_licenses %}
         <table class="data">
             <thead>
-                <tr><th>Organization</th><th>Product / edition</th><th>Expires</th><th>Seats</th></tr>
+                <tr><th>Organization</th><th>Product / edition</th><th>Expires</th></tr>
             </thead>
             <tbody>
             {% for license in summary.expiring_licenses %}
@@ -38,7 +30,6 @@
                     <td><a href="{{ url_for('organizations.detail', organization_id=license.organization_id) }}">{{ license.organization.name }}</a></td>
                     <td><a href="{{ url_for('licenses.detail', license_id=license.id) }}">{{ license.product.code }} / {{ license.edition.name }}</a></td>
                     <td>{{ license.expires_at.strftime('%Y-%m-%d') }}</td>
-                    <td>{{ license.seat_limit }}</td>
                 </tr>
             {% endfor %}
             </tbody>

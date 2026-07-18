@@ -12,11 +12,7 @@ class NotFoundError(LicensingError):
 
 
 class ConflictError(LicensingError):
-    """E.g. duplicate device key, duplicate active membership, seat already assigned."""
-
-
-class SeatLimitExceededError(LicensingError):
-    pass
+    """E.g. duplicate device key, duplicate active membership."""
 
 
 class DeviceLimitExceededError(LicensingError):
@@ -79,7 +75,6 @@ class ProhibitedFieldError(LicensingError):
 EXCEPTION_STATUS_MAP: dict[type[LicensingError], int] = {
     NotFoundError: 404,
     ConflictError: 409,
-    SeatLimitExceededError: 409,
     DeviceLimitExceededError: 409,
     InvalidCredentialsError: 401,
     AccountDisabledError: 403,

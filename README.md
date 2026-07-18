@@ -1,8 +1,10 @@
 # Deepvac Hub
 
-This app is the cloud service for **identity, organizations, seats,
-device activation, and cryptographic license issuance/renewal/revocation**
-for the deepvac-insight desktop application.
+This app is the cloud service for **identity, organizations, device
+activation, and cryptographic license issuance** for the deepvac-insight
+desktop application. Licenses are lifetime grants per organization — every
+active member is entitled, with no per-seat limit and no renewal/revocation
+flow (see "Phase D scope" below).
 
 This service
 never stores experiment files, names, metadata, measurements, channels,
@@ -61,17 +63,17 @@ renewal endpoint (`/licenses/refresh*`) and no device management endpoint
 | Section | Routes (indicative) | Phase |
 |---|---|---|
 | Auth | `/login`, `/logout`, `/account/password` | B |
-| Dashboard | `/` — orgs, licenses, seats, devices, expiring soon | C |
+| Dashboard | `/` — orgs, licenses, devices, expiring soon | C |
 | Organizations | `/organizations`, `/organizations/new`, `/organizations/<id>` (edit/disable/memberships/licenses/devices) | C |
-| Users | `/users`, `/users/new`, `/users/<id>` (disable/reactivate/reset-password/memberships/seats/devices/security) | C |
-| Licenses | `/organizations/<id>/licenses/new`, `/licenses/<id>` (read-only overview, seats, certificates) | C |
-| Seats | `/licenses/<id>/seats` (assign/remove) | C |
+| Users | `/users`, `/users/new`, `/users/<id>` (disable/reactivate/reset-password/memberships/devices/security) | C |
+| Licenses | `/organizations/<id>/licenses/new`, `/licenses/<id>` (read-only overview, certificates) | C |
 | Devices | read-only, inline on organization/user detail pages | C |
 | Signing keys | `/signing-keys` (read-only metadata; generation is CLI-only) | A/F |
 | Audit | `/audit` (filter by date/org/user/event/target) | F |
 
 No standalone `/devices` page and no suspend/revoke/renew actions on
-licenses: see "Phase D scope" below for why.
+licenses: see "Phase D scope" below for why. No seat management either:
+see "Membership-based entitlement" below that.
 
 ## Sequence diagrams
 
@@ -97,14 +99,10 @@ malicious clients, and the honest limits of offline enforcement. Full table:
 ## Implementation phases
 
 This repo is built in the vertical phases specified for this project:
-**A** foundation → **B** management auth → **C** orgs/licenses/seats
-→ **D** activation → **F** hardening.
-
-**Phase E (renewal/revocation) is deliberately dropped, not deferred.**
-Licenses in this product are lifetime grants for an organization and
-everyone in it — not subscriptions — so there is no periodic renewal
-check-in and no device revoke/replace flow. See "Phase D scope" below and
-`docs/threat-model.md` for what that trades away.
+**A** foundation → **B** management auth → **C** orgs/licenses
+→ **D** activation → **F** hardening. (Phase C originally included a
+per-seat license model; that was replaced with membership-based
+entitlement — see "Membership-based entitlement" below.)
 
 ### Phase A scope
 
@@ -114,16 +112,19 @@ check-in and no device revoke/replace flow. See "Phase D scope" below and
   works against PostgreSQL.
 * `src/licensing/models/*` — full normalized schema from the spec (users,
   organizations, memberships, products, editions, features, edition_features,
-  organization_licenses, license_seat_assignments, device_activations,
-  activation_requests, issued_license_certificates, signing_keys,
-  audit_events, refresh_challenges) with the DB-level constraints described
-  in `docs/database-erd.md`.
+  organization_licenses, device_activations, activation_requests,
+  issued_license_certificates, signing_keys, audit_events,
+  refresh_challenges) with the DB-level constraints described in
+  `docs/database-erd.md`. (Phase A also shipped a `license_seat_assignments`
+  table + `organization_licenses.seat_limit` column; both were dropped once
+  Phase D moved to membership-based entitlement — see "Phase D scope" below.)
 * Alembic wired to the models.
 * `src/licensing/licensing/canonical.py` + `src/licensing/security/signing.py`
   — canonical serialization and Ed25519 sign/verify, with test vectors.
 * FastAPI (`apps/api`) with `/health/live` and `/health/ready`
-  (DB check); `devices.py` router remains a not-yet-implemented stub for
-  Phase E.
+  (DB check); `devices.py` router shipped as a not-yet-implemented stub for
+  Phase E at this point — later deleted outright once Phase D dropped E
+  entirely (see "Phase D scope" below).
 * Flask (`apps/web`) app-factory skeleton with extensions wired
   (DB session, CSRF, security headers). Full RBAC/dashboard/org/user/license
   management screens remain Phase B/C.
@@ -135,9 +136,12 @@ check-in and no device revoke/replace flow. See "Phase D scope" below and
 
 ### Activation slice (pulled forward from Phase D)
 
-* `src/licensing/services/{activation,seats,devices,issuance,signing_keys}.py`
-  — start/approve/complete activation, transactional seat assignment, device registration with duplicate-key and
-  device-limit enforcement, certificate issuance, and public-key listing.
+* `src/licensing/services/{activation,devices,issuance,signing_keys}.py`
+  — start/approve/complete activation, device registration with
+  duplicate-key and device-limit enforcement, certificate issuance, and
+  public-key listing. (Originally also `services/seats.py` for
+  transactional seat assignment; removed once Phase D moved to
+  membership-based entitlement — see "Phase D scope" below.)
 * `apps/api/routers/activation.py` — `POST /activations`,
   `GET /activations/{id}`, `POST /activations/{id}/complete`.
 * `apps/api/routers/licenses.py` — `GET /licensing/public-keys`.
@@ -150,8 +154,8 @@ check-in and no device revoke/replace flow. See "Phase D scope" below and
   device's user code, lists the signed-in user's organizations with an
   active license for the requested product, and approves on submit.
 * `scripts/seed_development.py` now also seeds a demo organization, user,
-  active professional license, and seat (see "Verifying activation end to
-  end" below).
+  and active professional license (see "Verifying activation end to end"
+  below).
 
 ### Verifying activation end to end
 
@@ -163,7 +167,8 @@ docker compose run --rm tools python scripts/seed_development.py --key-id dev-ke
 ```
 
 This seeds a demo org (`demo-org`) with an active `deepvac-insight`
-professional license (5 seats) and a portal login: `demo@example.com` /
+professional license (entitling every active member of the org, no seat
+limit) and a portal login: `demo@example.com` /
 `DemoPass123!` at `http://localhost:8080/login`. Run the sibling `insight`
 app (`python main.py` there) — its **Activate this installation** window
 opens `http://localhost:8080/activate?user_code=...`; sign in with the demo
@@ -199,19 +204,18 @@ caches a verified license under `data/license/`. See `../insight/README.md`
   `docs/threat-model.md` threat #9.
 * `src/licensing/services/{organizations,users,licenses,dashboard}.py` —
   organization lifecycle and membership management, the vendor-managed user
-  directory, license creation plus org-scoped seat assignment (delegates
-  locking to the existing `services/seats.py`), and dashboard summary
-  counts. (Originally this also had suspend/reactivate/revoke/renew license
-  actions; removed in Phase D once licenses became lifetime grants — see
-  "Phase D scope" below.)
+  directory, license creation, and dashboard summary counts. (Originally
+  this also had suspend/reactivate/revoke/renew license actions and
+  org-scoped seat assignment; both removed in Phase D once licenses became
+  membership-based lifetime grants — see "Phase D scope" below.)
 * `apps/web/{dashboard,organizations,users,licenses}/` — the rest of the
   admin portal: dashboard (vendor-only summary + licenses expiring soon),
   organizations (list/create/detail with memberships/licenses/devices
   sections), users (vendor-only directory, disable/reactivate/password
-  reset/vendor-role grant), licenses (create under an org, seat
-  assign/remove, read-only certificate list). `vendor_support` gets
-  read-only access everywhere; write actions require `vendor_super_admin`
-  or (for org-scoped actions) that org's `organization_admin`.
+  reset/vendor-role grant), licenses (create under an org, read-only
+  certificate list). `vendor_support` gets read-only access everywhere;
+  write actions require `vendor_super_admin` or (for org-scoped actions)
+  that org's `organization_admin`.
 * `apps/web/auth/` — `/account/password` self-service change added; login
   converted to a `FlaskForm`; session gains a sliding idle timeout
   (`SESSION_IDLE_TIMEOUT_MINUTES`, default 60) on top of the existing 8h
@@ -220,14 +224,14 @@ caches a verified license under `data/license/`. See `../insight/README.md`
   `PermissionDeniedError`/`NotFoundError`, sharing a status map
   (`licensing.exceptions.EXCEPTION_STATUS_MAP`) with `apps/api/error_handlers.py`
   so the two surfaces can't drift. Business-logic errors (validation,
-  conflicts, seat limits) stay inline per route via flash messages, matching
-  the pattern already established by `apps/web/activate/routes.py`.
+  conflicts, device limits) stay inline per route via flash messages,
+  matching the pattern already established by `apps/web/activate/routes.py`.
 * Admin-initiated password reset sets the new password directly (no forced
   change flow, no email dependency — this app has no mail sender).
 * Audit events are recorded for every write action (org/user/license/
-  membership/seat lifecycle changes) via the existing `licensing.audit.record_event`
-  and its metadata allow-list, which already covered everything needed with
-  no changes.
+  membership lifecycle changes) via the existing
+  `licensing.audit.record_event` and its metadata allow-list, which already
+  covered everything needed with no changes.
 * Deliberately deferred to Phase F: the filterable `/audit` page — org/user
   detail pages surface no audit data in the meantime.
 * Tests: `tests/factories.py` (shared builders), a `flask_client` fixture
@@ -289,3 +293,32 @@ compatibility:
   `RefreshChallenge` (model) are kept as inert, never-written schema rather
   than migrated out — same treatment as the now-unused
   `OrganizationLicenseStatus.SUSPENDED`/`REVOKED` enum values.
+
+### Membership-based entitlement (no seat limit) — follow-up to Phase D
+
+A per-seat license model (buy N seats, assign them to specific users) never
+matched the product intent: **a license entitles every active member of
+the organization that owns it** — not a capped subset. The seat model was
+removed rather than patched:
+
+* `organization_licenses.seat_limit` and the entire `license_seat_assignments`
+  table are dropped (migration `fa66924fa288`, not just deprecated in
+  place — this one was fully built and used, unlike the never-implemented
+  Phase E scaffolding above, so leaving dead rows around would be actively
+  misleading). `SeatAssignmentStatus` and `SeatLimitExceededError` are
+  gone with it.
+* `services/activation.py`'s `complete_activation` no longer calls a seat
+  service at all — entitlement is exactly "active `OrganizationMembership`
+  in an org with an active license for the requested product/edition,"
+  already the membership check that existed anyway.
+  `device_limit_per_user` is unaffected and still the only per-user cap
+  (how many devices *one* person can register, a different question from
+  how many people can use the product).
+  `apps/web/licenses/{routes,forms}.py` lost the assign/remove-seat
+  endpoints and the seat-limit form field; `apps/web/users/routes.py` lost
+  the per-user "Seats" list (redundant with Memberships — access now
+  follows directly from which orgs someone belongs to).
+* This is backward compatible with `../insight`: nothing on the desktop
+  side ever called a seats endpoint, so activations that previously would
+  have failed with `SeatLimitExceededError` now simply succeed — strictly
+  more permissive, no client change needed.

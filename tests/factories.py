@@ -17,11 +17,10 @@ from licensing.models.enums import (
     MembershipStatus,
     OrganizationLicenseStatus,
     OrganizationStatus,
-    SeatAssignmentStatus,
     UserStatus,
     VendorRole,
 )
-from licensing.models.licenses import LicenseSeatAssignment, OrganizationLicense
+from licensing.models.licenses import OrganizationLicense
 from licensing.models.organizations import Organization, OrganizationMembership
 from licensing.models.products import Edition, Product
 from licensing.models.users import User
@@ -112,7 +111,6 @@ def make_license(
     organization: Organization,
     product: Product,
     edition: Edition,
-    seat_limit: int = 5,
     device_limit_per_user: int = 3,
     status: OrganizationLicenseStatus = OrganizationLicenseStatus.ACTIVE,
     expires_in_days: int = 365,
@@ -123,7 +121,6 @@ def make_license(
         product_id=product.id,
         edition_id=edition.id,
         status=status,
-        seat_limit=seat_limit,
         device_limit_per_user=device_limit_per_user,
         starts_at=now,
         expires_at=now + timedelta(days=expires_in_days),
@@ -132,22 +129,3 @@ def make_license(
     session.add(license_)
     session.flush()
     return license_
-
-
-def make_seat_assignment(
-    session: Session,
-    *,
-    license_: OrganizationLicense,
-    user: User,
-    assigned_by: User | None = None,
-    status: SeatAssignmentStatus = SeatAssignmentStatus.ACTIVE,
-) -> LicenseSeatAssignment:
-    seat = LicenseSeatAssignment(
-        organization_license_id=license_.id,
-        user_id=user.id,
-        status=status,
-        assigned_by_user_id=(assigned_by or user).id,
-    )
-    session.add(seat)
-    session.flush()
-    return seat

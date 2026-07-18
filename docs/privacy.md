@@ -23,7 +23,7 @@ flowchart TB
     subgraph Cloud["hub (this repo) -- vendor cloud"]
         Idn[Identity: users, orgs, memberships]
         Ent[Entitlements: products, editions, features]
-        Seat[Seats + device activations]
+        Dev[Device activations]
         Cert[Signed license certificates]
         Aud[Admin audit events]
     end

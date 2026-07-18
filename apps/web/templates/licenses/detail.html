@@ -4,45 +4,10 @@
 <div class="card wide">
     <h1>{{ license.product.code }} / {{ license.edition.name }} <span class="badge status-{{ license.status.value }}">{{ license.status.value }}</span></h1>
     <p><strong>Organization:</strong> <a href="{{ url_for('organizations.detail', organization_id=license.organization_id) }}">{{ license.organization.name }}</a></p>
-    <p><strong>Seat limit:</strong> {{ license.seat_limit }} &middot; <strong>Device limit / user:</strong> {{ license.device_limit_per_user }}</p>
+    <p><strong>Device limit / user:</strong> {{ license.device_limit_per_user }}</p>
     <p><strong>Starts:</strong> {{ license.starts_at.strftime('%Y-%m-%d') }} &middot; <strong>Expires:</strong> {{ license.expires_at.strftime('%Y-%m-%d') }}</p>
     <p><strong>Certificate validity from issuance:</strong> {{ license.offline_validity_days }} days</p>
-
-    <div class="section">
-        <h2>Seats</h2>
-        {% if seats %}
-        <table class="data">
-            <thead><tr><th>User</th><th>Assigned</th>{% if can_admin %}<th></th>{% endif %}</tr></thead>
-            <tbody>
-            {% for seat in seats %}
-                <tr>
-                    <td>{{ seat.user.display_name }} ({{ seat.user.email }})</td>
-                    <td>{{ seat.assigned_at.strftime('%Y-%m-%d') }}</td>
-                    {% if can_admin %}
-                    <td>
-                        <form method="post" action="{{ url_for('licenses.remove_seat', license_id=license.id, seat_assignment_id=seat.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-danger">Remove</button>
-                        </form>
-                    </td>
-                    {% endif %}
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="empty-state">No seats assigned.</p>
-        {% endif %}
-
-        {% if can_admin %}
-        <form method="post" action="{{ url_for('licenses.assign_seat', license_id=license.id) }}" class="button-row">
-            {{ seat_form.hidden_tag() }}
-            {{ seat_form.email(placeholder="member@example.com") }}
-            <button type="submit" class="btn btn-primary">Assign seat</button>
-        </form>
-        {% for e in seat_form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
-        {% endif %}
-    </div>
+    <p class="muted">Entitles every active member of this organization — no per-user seat limit.</p>
 
     <div class="section">
         <h2>Issued certificates</h2>

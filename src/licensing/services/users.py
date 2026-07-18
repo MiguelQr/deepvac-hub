@@ -15,8 +15,7 @@ from sqlalchemy.orm import Session
 
 from licensing.exceptions import ConflictError, NotFoundError
 from licensing.models.devices import DeviceActivation
-from licensing.models.enums import MembershipStatus, SeatAssignmentStatus, UserStatus, VendorRole
-from licensing.models.licenses import LicenseSeatAssignment, OrganizationLicense
+from licensing.models.enums import MembershipStatus, UserStatus, VendorRole
 from licensing.models.organizations import OrganizationMembership
 from licensing.models.users import User
 from licensing.pagination import Page, paginate
@@ -146,25 +145,6 @@ def list_memberships_for_user(
             select(OrganizationMembership).where(
                 OrganizationMembership.user_id == user_id,
                 OrganizationMembership.status == MembershipStatus.ACTIVE,
-            )
-        ).scalars()
-    )
-
-
-def list_seats_for_user(
-    session: Session, *, actor: User, user_id: uuid.UUID
-) -> list[LicenseSeatAssignment]:
-    auth_service.require_vendor(actor)
-    return list(
-        session.execute(
-            select(LicenseSeatAssignment)
-            .join(
-                OrganizationLicense,
-                LicenseSeatAssignment.organization_license_id == OrganizationLicense.id,
-            )
-            .where(
-                LicenseSeatAssignment.user_id == user_id,
-                LicenseSeatAssignment.status == SeatAssignmentStatus.ACTIVE,
             )
         ).scalars()
     )

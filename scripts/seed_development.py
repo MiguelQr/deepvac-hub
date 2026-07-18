@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Seed development reference data: the deepvac-insight product, its
 editions and features; (if a generated keypair is present) the signing_keys
-row for the active signing key; and a demo organization/user/license/seat so
+row for the active signing key; and a demo organization/user/license so
 the desktop activation flow can be verified end to end locally.
 
 Idempotent — safe to run multiple times.
@@ -29,11 +29,10 @@ from licensing.models.enums import (  # noqa: E402
     OrganizationLicenseStatus,
     OrganizationStatus,
     ProductStatus,
-    SeatAssignmentStatus,
     SigningKeyStatus,
     UserStatus,
 )
-from licensing.models.licenses import LicenseSeatAssignment, OrganizationLicense  # noqa: E402
+from licensing.models.licenses import OrganizationLicense  # noqa: E402
 from licensing.models.organizations import Organization, OrganizationMembership  # noqa: E402
 from licensing.models.products import Edition, EditionFeature, Feature, Product  # noqa: E402
 from licensing.models.users import User  # noqa: E402
@@ -142,9 +141,10 @@ def seed_signing_key(session, key_id: str | None, public_key_file: str | None) -
 
 
 def seed_demo_organization(session) -> None:  # type: ignore[no-untyped-def]
-    """Creates a demo user + organization + active professional license +
-    seat, so the desktop app's activation flow has something real to
-    activate against without any manual DB setup.
+    """Creates a demo user + organization + active professional license,
+    so the desktop app's activation flow has something real to activate
+    against without any manual DB setup. Any active member of the org can
+    activate -- there is no separate seat-assignment step.
     """
     now = datetime.now(UTC)
 
@@ -210,7 +210,6 @@ def seed_demo_organization(session) -> None:  # type: ignore[no-untyped-def]
             product_id=product.id,
             edition_id=edition.id,
             status=OrganizationLicenseStatus.ACTIVE,
-            seat_limit=5,
             device_limit_per_user=3,
             starts_at=now,
             expires_at=now + timedelta(days=365),
@@ -219,29 +218,10 @@ def seed_demo_organization(session) -> None:  # type: ignore[no-untyped-def]
         session.add(org_license)
         session.flush()
 
-    seat = (
-        session.query(LicenseSeatAssignment)
-        .filter(
-            LicenseSeatAssignment.organization_license_id == org_license.id,
-            LicenseSeatAssignment.user_id == user.id,
-            LicenseSeatAssignment.status == SeatAssignmentStatus.ACTIVE,
-        )
-        .one_or_none()
-    )
-    if seat is None:
-        session.add(
-            LicenseSeatAssignment(
-                organization_license_id=org_license.id,
-                user_id=user.id,
-                status=SeatAssignmentStatus.ACTIVE,
-                assigned_by_user_id=user.id,
-            )
-        )
-        session.flush()
-
     print(
         f"Seeded demo organization {DEMO_ORG_SLUG!r} with an active "
-        f"{DEMO_EDITION_CODE} license for {PRODUCT_CODE!r} (seat_limit=5).\n"
+        f"{DEMO_EDITION_CODE} license for {PRODUCT_CODE!r} (no seat limit -- "
+        "any active member of the org can activate).\n"
         f"Demo portal login: {DEMO_USER_EMAIL} / {DEMO_USER_PASSWORD}"
     )
 

@@ -60,11 +60,6 @@ class OrganizationLicenseStatus(StrEnum):
     REVOKED = "revoked"
 
 
-class SeatAssignmentStatus(StrEnum):
-    ACTIVE = "active"
-    REMOVED = "removed"
-
-
 class DeviceActivationStatus(StrEnum):
     PENDING = "pending"
     ACTIVE = "active"

@@ -62,7 +62,7 @@ def require_org_view(
 
 
 def require_org_admin(session: Session, user: User, organization_id: uuid.UUID) -> None:
-    """Write access to an org's self-service actions (memberships, seats):
+    """Write access to an org's self-service actions (managing memberships):
     vendor_super_admin, or an active organization_admin membership in that
     specific org."""
     if user.vendor_role == VendorRole.VENDOR_SUPER_ADMIN:

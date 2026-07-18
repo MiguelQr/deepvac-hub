@@ -20,7 +20,6 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "user_email_domain",
         "product_code",
         "edition_code",
-        "seat_limit",
         "device_limit_per_user",
         "device_display_name",
         "role",

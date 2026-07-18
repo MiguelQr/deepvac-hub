@@ -28,8 +28,8 @@ sequenceDiagram
     end
     D->>D: Generate Ed25519 device keypair locally
     D->>A: POST /api/v1/activations/{activation_id}/complete {device_public_key}
-    A->>DB: Re-validate user status, membership, seat availability, device limit, entitlement
-    A->>DB: INSERT device_activations (status=active), UPDATE seat assignment if needed
+    A->>DB: Re-validate user status, membership, device limit, entitlement
+    A->>DB: INSERT device_activations (status=active)
     A->>A: Build canonical license payload, sign with Ed25519 private key
     A->>DB: INSERT issued_license_certificates
     A->>DB: UPDATE activation_requests SET status=consumed, consumed_at=now()

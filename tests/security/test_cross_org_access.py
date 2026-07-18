@@ -73,27 +73,6 @@ def test_org_admin_cannot_view_a_different_orgs_license(flask_client, db_session
     assert response.status_code in (403, 404)
 
 
-def test_org_admin_cannot_assign_a_seat_on_a_different_orgs_license(  # type: ignore[no-untyped-def]
-    flask_client, db_session
-) -> None:
-    org_a = make_organization(db_session)
-    org_b = make_organization(db_session)
-    product, edition = make_product_and_edition(db_session)
-    license_b = make_license(db_session, organization=org_b, product=product, edition=edition)
-    admin_a = make_user(db_session)
-    make_membership(
-        db_session, organization=org_a, user=admin_a, role=MembershipRole.ORGANIZATION_ADMIN
-    )
-    _login_as(flask_client, admin_a)
-
-    response = flask_client.post(
-        f"/licenses/{license_b.id}/seats",
-        data={"email": admin_a.email},
-        follow_redirects=True,
-    )
-    assert response.status_code in (403, 404)
-
-
 def test_plain_member_cannot_disable_own_organization(flask_client, db_session) -> None:  # type: ignore[no-untyped-def]
     org = make_organization(db_session)
     member = make_user(db_session)

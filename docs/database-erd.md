@@ -12,8 +12,6 @@ erDiagram
     EDITIONS ||--o{ ORGANIZATION_LICENSES : "licensed as"
     EDITIONS ||--o{ EDITION_FEATURES : "grants"
     FEATURES ||--o{ EDITION_FEATURES : "granted by"
-    ORGANIZATION_LICENSES ||--o{ LICENSE_SEAT_ASSIGNMENTS : "allocates"
-    USERS ||--o{ LICENSE_SEAT_ASSIGNMENTS : "assigned"
     ORGANIZATION_LICENSES ||--o{ DEVICE_ACTIVATIONS : "activates under"
     USERS ||--o{ DEVICE_ACTIVATIONS : "activates"
     DEVICE_ACTIVATIONS ||--o{ ISSUED_LICENSE_CERTIFICATES : "receives"
@@ -92,23 +90,12 @@ erDiagram
         uuid product_id FK
         uuid edition_id FK
         string status
-        int seat_limit
         int device_limit_per_user
         timestamptz starts_at
         timestamptz expires_at
         int offline_validity_days
         timestamptz created_at
         timestamptz updated_at
-    }
-
-    LICENSE_SEAT_ASSIGNMENTS {
-        uuid id PK
-        uuid organization_license_id FK
-        uuid user_id FK
-        string status
-        timestamptz assigned_at
-        timestamptz removed_at
-        uuid assigned_by_user_id FK
     }
 
     DEVICE_ACTIVATIONS {
@@ -196,11 +183,12 @@ erDiagram
 * `users.normalized_email` — unique index, lower-cased at write time.
 * `organization_memberships` — partial unique index on `(organization_id, user_id)`
   `WHERE status = 'active'` to prevent duplicate active memberships.
-* `license_seat_assignments` — partial unique index on
-  `(organization_license_id, user_id) WHERE status = 'active'`; seat-limit
-  enforcement done via `SELECT ... FOR UPDATE` on the parent
-  `organization_licenses` row inside the assignment transaction (see
-  `services/seats.py`).
+* `organization_licenses` has no seat/user cap: an active license entitles
+  every active member of its organization to the product/edition, enforced
+  by an org-membership check at activation time (`services/activation.py`),
+  not a count against any limit. `device_limit_per_user` is the only
+  per-user cap, and it's enforced transactionally (see below), not via a
+  claim/allocation table.
 * `device_activations.device_public_key_hash` — globally unique; a device key
   can never be registered twice, satisfying the "duplicate device key" threat.
 * `device_activations` — active-device-count-per-user enforced transactionally

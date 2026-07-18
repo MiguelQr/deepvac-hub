@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from flask_wtf import FlaskForm
-from wtforms import DateTimeLocalField, IntegerField, SelectField, StringField
-from wtforms.validators import DataRequired, Email, NumberRange
+from wtforms import DateTimeLocalField, IntegerField, SelectField
+from wtforms.validators import DataRequired, NumberRange
 
 
 class LicenseForm(FlaskForm):
     product_edition = SelectField("Product / edition", validators=[DataRequired()])
-    seat_limit = IntegerField("Seat limit", validators=[DataRequired(), NumberRange(min=0)])
     device_limit_per_user = IntegerField(
         "Device limit per user", default=3, validators=[DataRequired(), NumberRange(min=1)]
     )
@@ -22,7 +21,3 @@ class LicenseForm(FlaskForm):
         default=36500,
         validators=[DataRequired(), NumberRange(min=1)],
     )
-
-
-class AssignSeatForm(FlaskForm):
-    email = StringField("Member email", validators=[DataRequired(), Email()])
