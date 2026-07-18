@@ -1,0 +1,38 @@
+{% extends "shared/base.html" %}
+{% block title %}Users — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card wide">
+    <div class="toolbar">
+        <h1>Users</h1>
+        <a href="{{ url_for('users.new') }}" class="btn btn-primary">New user</a>
+    </div>
+    <form method="get" class="toolbar">
+        <input type="text" name="q" placeholder="Search name or email" value="{{ q }}">
+        <select name="status">
+            <option value="" {% if not status %}selected{% endif %}>Any status</option>
+            <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+            <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="disabled" {% if status == 'disabled' %}selected{% endif %}>Disabled</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+    </form>
+    {% if page_result.items %}
+    <table class="data">
+        <thead><tr><th>Name</th><th>Email</th><th>Vendor role</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for u in page_result.items %}
+            <tr>
+                <td><a href="{{ url_for('users.detail', user_id=u.id) }}">{{ u.display_name }}</a></td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.vendor_role.value if u.vendor_role else "—" }}</td>
+                <td><span class="badge status-{{ u.status.value }}">{{ u.status.value }}</span></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% include "shared/pagination.html" %}
+    {% else %}
+    <p class="empty-state">No users found.</p>
+    {% endif %}
+</div>
+{% endblock %}

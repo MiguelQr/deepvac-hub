@@ -16,6 +16,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import licensing.database as database_module
 import licensing.models  # noqa: F401  ensures all tables are registered
 from licensing.config import get_settings
 from licensing.database import Base
@@ -52,3 +53,35 @@ def db_session(engine) -> Generator[Session, None, None]:  # type: ignore[no-unt
     if transaction.is_active:
         transaction.rollback()
     connection.close()
+
+
+@pytest.fixture
+def flask_client(db_session: Session, monkeypatch):  # type: ignore[no-untyped-def]
+    """A Flask test client whose app talks to the exact same per-test
+    transactional connection as db_session -- so routes can be exercised
+    over HTTP while still asserting against db_session directly, and
+    everything rolls back together at teardown like the rest of the suite.
+
+    apps/web routes call db.commit() (see apps/web/activate/routes.py for
+    the established pattern); join_transaction_mode="create_savepoint"
+    makes those commits release a SAVEPOINT instead of ending the outer
+    per-test transaction db_session's rollback relies on.
+    """
+    connection = db_session.connection()
+    test_sessionmaker = sessionmaker(
+        bind=connection, expire_on_commit=False, join_transaction_mode="create_savepoint"
+    )
+
+    monkeypatch.setattr(database_module, "get_sessionmaker", lambda: test_sessionmaker)
+    database_module.get_scoped_session.cache_clear()
+
+    from apps.web.app import create_app
+
+    app = create_app()
+    app.config.update(TESTING=True, WTF_CSRF_ENABLED=False)
+
+    with app.test_client() as client:
+        yield client
+
+    database_module.get_scoped_session().remove()
+    database_module.get_scoped_session.cache_clear()

@@ -1,0 +1,36 @@
+{% extends "shared/base.html" %}
+{% block title %}Organizations — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card wide">
+    <div class="toolbar">
+        <h1>Organizations</h1>
+        <a href="{{ url_for('organizations.new') }}" class="btn btn-primary">New organization</a>
+    </div>
+    <form method="get" class="toolbar">
+        <input type="text" name="q" placeholder="Search name or slug" value="{{ q }}">
+        <select name="status">
+            <option value="" {% if not status %}selected{% endif %}>Any status</option>
+            <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+            <option value="disabled" {% if status == 'disabled' %}selected{% endif %}>Disabled</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+    </form>
+    {% if page_result.items %}
+    <table class="data">
+        <thead><tr><th>Name</th><th>Slug</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for org in page_result.items %}
+            <tr>
+                <td><a href="{{ url_for('organizations.detail', organization_id=org.id) }}">{{ org.name }}</a></td>
+                <td>{{ org.slug }}</td>
+                <td><span class="badge status-{{ org.status.value }}">{{ org.status.value }}</span></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% include "shared/pagination.html" %}
+    {% else %}
+    <p class="empty-state">No organizations found.</p>
+    {% endif %}
+</div>
+{% endblock %}

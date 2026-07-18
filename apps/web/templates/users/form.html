@@ -1,20 +1,23 @@
 {% extends "shared/base.html" %}
-{% block title %}Sign in — deepvac Licensing{% endblock %}
+{% block title %}New user — deepvac Licensing{% endblock %}
 {% block content %}
 <div class="card narrow">
-    <h1>Sign in</h1>
-    {% if error %}<p class="alert">{{ error }}</p>{% endif %}
+    <h1>New user</h1>
     <form method="post">
         {{ form.hidden_tag() }}
         <label>Email
             {{ form.email(autofocus=true) }}
             {% for e in form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
         </label>
-        <label>Password
+        <label>Display name
+            {{ form.display_name() }}
+            {% for e in form.display_name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </label>
+        <label>Initial password
             {{ form.password() }}
             {% for e in form.password.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
         </label>
-        <button type="submit" class="primary">Sign in</button>
+        <button type="submit" class="btn btn-primary">Create user</button>
     </form>
 </div>
 {% endblock %}

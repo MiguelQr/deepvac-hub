@@ -1,0 +1,99 @@
+{% extends "shared/base.html" %}
+{% block title %}License — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card wide">
+    <h1>{{ license.product.code }} / {{ license.edition.name }} <span class="badge status-{{ license.status.value }}">{{ license.status.value }}</span></h1>
+    <p><strong>Organization:</strong> <a href="{{ url_for('organizations.detail', organization_id=license.organization_id) }}">{{ license.organization.name }}</a></p>
+    <p><strong>Seat limit:</strong> {{ license.seat_limit }} &middot; <strong>Device limit / user:</strong> {{ license.device_limit_per_user }}</p>
+    <p><strong>Starts:</strong> {{ license.starts_at.strftime('%Y-%m-%d') }} &middot; <strong>Expires:</strong> {{ license.expires_at.strftime('%Y-%m-%d') }}</p>
+    <p><strong>Offline validity:</strong> {{ license.offline_validity_days }} days</p>
+
+    {% if can_write %}
+    <div class="section">
+        <h2>Actions</h2>
+        <div class="button-row">
+            {% if license.status.value == 'active' %}
+            <form method="post" action="{{ url_for('licenses.suspend', license_id=license.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-secondary">Suspend</button>
+            </form>
+            {% elif license.status.value == 'suspended' %}
+            <form method="post" action="{{ url_for('licenses.reactivate', license_id=license.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-secondary">Reactivate</button>
+            </form>
+            {% endif %}
+            {% if license.status.value != 'revoked' %}
+            <form method="post" action="{{ url_for('licenses.revoke', license_id=license.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger">Revoke</button>
+            </form>
+            {% endif %}
+        </div>
+        {% if license.status.value != 'revoked' %}
+        <form method="post" action="{{ url_for('licenses.renew', license_id=license.id) }}" class="button-row">
+            {{ renew_form.hidden_tag() }}
+            {{ renew_form.extend_days() }}
+            <button type="submit" class="btn btn-primary">Renew</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h2>Seats</h2>
+        {% if seats %}
+        <table class="data">
+            <thead><tr><th>User</th><th>Assigned</th>{% if can_admin %}<th></th>{% endif %}</tr></thead>
+            <tbody>
+            {% for seat in seats %}
+                <tr>
+                    <td>{{ seat.user.display_name }} ({{ seat.user.email }})</td>
+                    <td>{{ seat.assigned_at.strftime('%Y-%m-%d') }}</td>
+                    {% if can_admin %}
+                    <td>
+                        <form method="post" action="{{ url_for('licenses.remove_seat', license_id=license.id, seat_assignment_id=seat.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger">Remove</button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No seats assigned.</p>
+        {% endif %}
+
+        {% if can_admin %}
+        <form method="post" action="{{ url_for('licenses.assign_seat', license_id=license.id) }}" class="button-row">
+            {{ seat_form.hidden_tag() }}
+            {{ seat_form.email(placeholder="member@example.com") }}
+            <button type="submit" class="btn btn-primary">Assign seat</button>
+        </form>
+        {% for e in seat_form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Issued certificates</h2>
+        {% if certificates %}
+        <table class="data">
+            <thead><tr><th>Issued</th><th>Expires</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for cert in certificates %}
+                <tr>
+                    <td>{{ cert.issued_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ cert.expires_at.strftime('%Y-%m-%d') }}</td>
+                    <td><span class="badge status-{{ cert.status.value }}">{{ cert.status.value }}</span></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No certificates issued yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

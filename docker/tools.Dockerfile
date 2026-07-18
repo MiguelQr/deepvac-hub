@@ -15,7 +15,7 @@ RUN apt-get update \
 
 COPY pyproject.toml ./
 COPY src ./src
-RUN pip install --no-cache-dir '.[api,management,dev]' \
+RUN pip install --no-cache-dir '.[api,web,dev]' \
     && pip install --no-cache-dir alembic
 
 COPY apps ./apps

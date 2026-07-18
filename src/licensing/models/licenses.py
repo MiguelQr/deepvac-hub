@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -10,6 +11,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from licensing.database import Base
 from licensing.models.enums import OrganizationLicenseStatus, SeatAssignmentStatus
 from licensing.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin, pg_enum
+
+if TYPE_CHECKING:
+    from licensing.models.organizations import Organization
+    from licensing.models.products import Edition, Product
+    from licensing.models.users import User
 
 
 class OrganizationLicense(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -44,6 +50,9 @@ class OrganizationLicense(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     seat_assignments: Mapped[list[LicenseSeatAssignment]] = relationship(
         back_populates="organization_license"
     )
+    organization: Mapped[Organization] = relationship()
+    product: Mapped[Product] = relationship()
+    edition: Mapped[Edition] = relationship()
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<OrganizationLicense {self.id} org={self.organization_id} status={self.status}>"
@@ -93,6 +102,7 @@ class LicenseSeatAssignment(UUIDPrimaryKeyMixin, Base):
     organization_license: Mapped[OrganizationLicense] = relationship(
         back_populates="seat_assignments"
     )
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<LicenseSeatAssignment {self.id} user={self.user_id} status={self.status}>"

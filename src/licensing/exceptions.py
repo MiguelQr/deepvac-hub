@@ -74,3 +74,31 @@ class ProhibitedFieldError(LicensingError):
     field name outside the licensing-metadata allow-list — see
     licensing/audit/allowlist.py and docs/privacy.md.
     """
+
+
+EXCEPTION_STATUS_MAP: dict[type[LicensingError], int] = {
+    NotFoundError: 404,
+    ConflictError: 409,
+    SeatLimitExceededError: 409,
+    DeviceLimitExceededError: 409,
+    InvalidCredentialsError: 401,
+    AccountDisabledError: 403,
+    ActivationExpiredError: 410,
+    ActivationAlreadyConsumedError: 409,
+    ActivationNotApprovedError: 409,
+    EntitlementError: 403,
+    ChallengeExpiredError: 410,
+    ChallengeAlreadyConsumedError: 409,
+    InvalidSignatureError: 401,
+    DeviceRevokedError: 403,
+    PermissionDeniedError: 403,
+}
+"""Shared HTTP-status mapping used by both apps/api/error_handlers.py and
+apps/web/errors.py, so the two surfaces don't drift out of sync."""
+
+
+def status_for(exc: LicensingError) -> int:
+    for exc_type, status_code in EXCEPTION_STATUS_MAP.items():
+        if isinstance(exc, exc_type):
+            return status_code
+    return 400

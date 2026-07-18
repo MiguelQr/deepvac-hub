@@ -8,16 +8,41 @@
 </head>
 <body>
     <header class="topbar">
-        <span class="brand">deepvac &middot; Licensing Portal</span>
+        <div class="topbar-left">
+            <span class="brand">deepvac &middot; Licensing Portal</span>
+            {% if current_user %}
+            <nav class="nav">
+                {% if is_vendor %}
+                <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+                <a href="{{ url_for('organizations.list_view') }}">Organizations</a>
+                <a href="{{ url_for('users.list_view') }}">Users</a>
+                {% endif %}
+                {% for membership in nav_memberships %}
+                <a href="{{ url_for('organizations.detail', organization_id=membership.organization_id) }}">{{ membership.organization.name }}</a>
+                {% endfor %}
+            </nav>
+            {% endif %}
+        </div>
         {% if current_user %}
-        <span class="muted">{{ current_user.display_name }}</span>
-        <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="link-button">Sign out</button>
-        </form>
+        <div class="topbar-right">
+            <a href="{{ url_for('auth.account_password') }}" class="muted">{{ current_user.display_name }}</a>
+            <form method="post" action="{{ url_for('auth.logout') }}" class="logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="link-button">Sign out</button>
+            </form>
+        </div>
         {% endif %}
     </header>
     <main class="page">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <p class="alert{% if category == 'success' %} success{% endif %}">{{ message }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
 </body>

@@ -176,3 +176,54 @@ caches a verified license under `data/license/`. See `../insight/README.md`
    itsdangerous-based) rather than server-side sessions, since Redis is
    deliberately deferred; this is revisited if session revocation-on-demand
    becomes a hard requirement (noted as a Phase F candidate improvement).
+
+### Phase B/C scope
+
+* `src/licensing/services/auth.py` — the authorization core: `require_vendor`
+  (any vendor role for read, `vendor_super_admin` for write),
+  `require_org_view`/`require_org_admin` (vendor staff may view any
+  organization; `organization_admin`/`organization_member` only their own,
+  via an active `OrganizationMembership`). Every org/user/license service
+  function authorizes through this module before touching data — see
+  `docs/threat-model.md` threat #9.
+* `src/licensing/services/{organizations,users,licenses,dashboard}.py` —
+  organization lifecycle and membership management, the vendor-managed user
+  directory, license lifecycle (create/suspend/reactivate/revoke/renew) plus
+  org-scoped seat assignment (delegates locking to the existing
+  `services/seats.py`), and dashboard summary counts.
+* `apps/web/{dashboard,organizations,users,licenses}/` — the rest of the
+  admin portal: dashboard (vendor-only summary + licenses expiring soon),
+  organizations (list/create/detail with memberships/licenses/devices
+  sections), users (vendor-only directory, disable/reactivate/password
+  reset/vendor-role grant), licenses (create under an org, suspend/
+  reactivate/revoke/renew, seat assign/remove, read-only certificate list).
+  `vendor_support` gets read-only access everywhere; write actions require
+  `vendor_super_admin` or (for org-scoped actions) that org's
+  `organization_admin`.
+* `apps/web/auth/` — `/account/password` self-service change added; login
+  converted to a `FlaskForm`; session gains a sliding idle timeout
+  (`SESSION_IDLE_TIMEOUT_MINUTES`, default 60) on top of the existing 8h
+  absolute lifetime.
+* `apps/web/errors.py` — centralized 403/404 handling for
+  `PermissionDeniedError`/`NotFoundError`, sharing a status map
+  (`licensing.exceptions.EXCEPTION_STATUS_MAP`) with `apps/api/error_handlers.py`
+  so the two surfaces can't drift. Business-logic errors (validation,
+  conflicts, seat limits) stay inline per route via flash messages, matching
+  the pattern already established by `apps/web/activate/routes.py`.
+* Admin-initiated password reset sets the new password directly (no forced
+  change flow, no email dependency — this app has no mail sender).
+* Audit events are recorded for every write action (org/user/license/
+  membership/seat lifecycle changes) via the existing `licensing.audit.record_event`
+  and its metadata allow-list, which already covered everything needed with
+  no changes.
+* Deliberately deferred to later phases: the filterable `/audit` page
+  (Phase F) — org/user detail pages surface no audit data in the meantime —
+  and device revoke/replace (Phase E), so org/user detail pages list devices
+  read-only.
+* Tests: `tests/factories.py` (shared builders), a `flask_client` fixture
+  (joins the Flask app's session to the same per-test transactional
+  connection as `db_session` via SQLAlchemy's `join_transaction_mode="create_savepoint"`,
+  so `db.commit()` calls in routes don't end the test's outer transaction),
+  unit tests per new service, integration tests per new blueprint, and
+  `tests/security/test_cross_org_access.py` — the explicit cross-org/role
+  enforcement test threat #9 calls for.

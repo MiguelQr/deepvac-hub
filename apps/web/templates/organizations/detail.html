@@ -1,0 +1,143 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ org.name }} — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card wide">
+    <div class="toolbar">
+        <h1>{{ org.name }} <span class="badge status-{{ org.status.value }}">{{ org.status.value }}</span></h1>
+        {% if can_write %}
+        <div class="button-row">
+            {% if org.status.value == 'active' %}
+            <form method="post" action="{{ url_for('organizations.disable', organization_id=org.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger">Disable</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url_for('organizations.reactivate', organization_id=org.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-secondary">Reactivate</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Overview</h2>
+        {% if can_write %}
+        <form method="post" action="{{ url_for('organizations.edit', organization_id=org.id) }}">
+            {{ edit_form.hidden_tag() }}
+            <label>Name
+                {{ edit_form.name() }}
+                {% for e in edit_form.name.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+            </label>
+            <label>Slug
+                {{ edit_form.slug() }}
+                {% for e in edit_form.slug.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+            </label>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+        {% else %}
+        <p><strong>Slug:</strong> {{ org.slug }}</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Members</h2>
+        {% if memberships %}
+        <table class="data">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th>{% if can_admin %}<th></th>{% endif %}</tr></thead>
+            <tbody>
+            {% for membership in memberships %}
+                <tr>
+                    <td>{{ membership.user.display_name }}</td>
+                    <td>{{ membership.user.email }}</td>
+                    <td>
+                        {% if can_admin %}
+                        <form method="post" action="{{ url_for('organizations.change_membership_role', organization_id=org.id, membership_id=membership.id) }}" style="display:flex; gap:6px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="role">
+                                {% for role in membership_roles %}
+                                <option value="{{ role.value }}" {% if membership.role == role %}selected{% endif %}>{{ role.value }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-secondary">Update</button>
+                        </form>
+                        {% else %}
+                        {{ membership.role.value }}
+                        {% endif %}
+                    </td>
+                    {% if can_admin %}
+                    <td>
+                        <form method="post" action="{{ url_for('organizations.remove_membership', organization_id=org.id, membership_id=membership.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger">Remove</button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No members yet.</p>
+        {% endif %}
+
+        {% if can_admin %}
+        <form method="post" action="{{ url_for('organizations.add_membership', organization_id=org.id) }}" class="button-row">
+            {{ membership_form.hidden_tag() }}
+            {{ membership_form.email(placeholder="member@example.com") }}
+            {{ membership_form.role() }}
+            <button type="submit" class="btn btn-primary">Add member</button>
+        </form>
+        {% for e in membership_form.email.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="toolbar">
+            <h2>Licenses</h2>
+            {% if can_write %}
+            <a href="{{ url_for('licenses.new', organization_id=org.id) }}" class="btn btn-primary">New license</a>
+            {% endif %}
+        </div>
+        {% if org_licenses %}
+        <table class="data">
+            <thead><tr><th>Product / edition</th><th>Status</th><th>Seats</th><th>Expires</th></tr></thead>
+            <tbody>
+            {% for license in org_licenses %}
+                <tr>
+                    <td><a href="{{ url_for('licenses.detail', license_id=license.id) }}">{{ license.product.code }} / {{ license.edition.name }}</a></td>
+                    <td><span class="badge status-{{ license.status.value }}">{{ license.status.value }}</span></td>
+                    <td>{{ license.seat_limit }}</td>
+                    <td>{{ license.expires_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No licenses yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Devices</h2>
+        {% if devices %}
+        <table class="data">
+            <thead><tr><th>Owner</th><th>Device</th><th>Status</th><th>Activated</th></tr></thead>
+            <tbody>
+            {% for device in devices %}
+                <tr>
+                    <td>{{ device.user.display_name }}</td>
+                    <td>{{ device.display_name or "—" }}</td>
+                    <td><span class="badge status-{{ device.status.value }}">{{ device.status.value }}</span></td>
+                    <td>{{ device.activated_at.strftime('%Y-%m-%d') if device.activated_at else "—" }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No devices activated yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

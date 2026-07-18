@@ -3,13 +3,6 @@
 Application factory pattern with blueprints, per section 9 of the spec.
 Imports domain code from src/licensing only; contains no business logic
 itself (see docs/architecture.md layering rules).
-
-Phase A shipped the factory, extensions, security headers, and
-session/cookie configuration. The `auth` and `activate` blueprints below
-were added to close the loop on desktop device-code activation (section 4)
-so the whole flow is verifiable locally; the rest of the admin portal
-(dashboard, organizations, users, licenses, devices, audit) still lands in
-Phase B/C — see README.md phase plan.
 """
 
 from __future__ import annotations
@@ -18,10 +11,13 @@ import logging
 import uuid
 
 from flask import Flask, g, request
+from sqlalchemy import select
 
 from apps.web.extensions import csrf
 from licensing.config import get_settings
 from licensing.database import get_scoped_session
+from licensing.models.enums import MembershipStatus
+from licensing.models.organizations import OrganizationMembership
 
 
 def create_app() -> Flask:
@@ -34,7 +30,9 @@ def create_app() -> Flask:
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=settings.session_cookie_secure,
-        PERMANENT_SESSION_LIFETIME=60 * 60 * 8,  # 8 hours; revisited in Phase B
+        PERMANENT_SESSION_LIFETIME=60 * 60 * 8,  # 8 hours absolute cap; idle
+        # timeout (Settings.session_idle_timeout_minutes) is enforced
+        # separately in apps/web/auth/session.py's login_required.
     )
 
     logging.basicConfig(level=settings.log_level)
@@ -74,22 +72,62 @@ def create_app() -> Flask:
     from apps.web.activate import bp as activate_bp
     from apps.web.auth import bp as auth_bp
     from apps.web.auth.session import load_current_user
+    from apps.web.dashboard import bp as dashboard_bp
+    from apps.web.errors import register_error_handlers
+    from apps.web.licenses import bp as licenses_bp
+    from apps.web.organizations import bp as organizations_bp
+    from apps.web.users import bp as users_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(activate_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(organizations_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(licenses_bp)
+    register_error_handlers(app)
 
     @app.context_processor
-    def _inject_current_user() -> dict[str, object]:
-        return {"current_user": load_current_user()}
+    def _inject_nav() -> dict[str, object]:
+        user = load_current_user()
+        is_vendor = user is not None and user.vendor_role is not None
+        nav_memberships: list[OrganizationMembership] = []
+        if user is not None and not is_vendor:
+            db = get_scoped_session()
+            nav_memberships = list(
+                db.execute(
+                    select(OrganizationMembership).where(
+                        OrganizationMembership.user_id == user.id,
+                        OrganizationMembership.status == MembershipStatus.ACTIVE,
+                    )
+                ).scalars()
+            )
+        return {
+            "current_user": user,
+            "is_vendor": is_vendor,
+            "nav_memberships": nav_memberships,
+        }
 
     @app.get("/")
     def index():
         from flask import redirect, url_for
 
-        return redirect(url_for("auth.login"))
-
-    # Remaining blueprints land in Phase C (dashboard, organizations, users,
-    # licenses) / Phase E (devices) / Phase F (audit).
+        user = load_current_user()
+        if user is None:
+            return redirect(url_for("auth.login"))
+        if user.vendor_role is not None:
+            return redirect(url_for("dashboard.index"))
+        db = get_scoped_session()
+        membership = db.execute(
+            select(OrganizationMembership).where(
+                OrganizationMembership.user_id == user.id,
+                OrganizationMembership.status == MembershipStatus.ACTIVE,
+            )
+        ).scalars().first()
+        if membership is not None:
+            return redirect(
+                url_for("organizations.detail", organization_id=membership.organization_id)
+            )
+        return redirect(url_for("activate.confirm"))
 
     return app
 

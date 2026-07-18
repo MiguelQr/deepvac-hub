@@ -1,0 +1,51 @@
+{% extends "shared/base.html" %}
+{% block title %}Dashboard — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card wide">
+    <h1>Dashboard</h1>
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="value">{{ summary.active_organizations }}</div>
+            <div class="label">Active organizations</div>
+        </div>
+        <div class="stat-card">
+            <div class="value">{{ summary.active_licenses }}</div>
+            <div class="label">Active licenses</div>
+        </div>
+        <div class="stat-card">
+            <div class="value">{{ summary.seats_used }}</div>
+            <div class="label">Seats used</div>
+        </div>
+        <div class="stat-card">
+            <div class="value">{{ summary.seats_available }}</div>
+            <div class="label">Seats available</div>
+        </div>
+        <div class="stat-card">
+            <div class="value">{{ summary.active_devices }}</div>
+            <div class="label">Active devices</div>
+        </div>
+    </div>
+    <div class="section">
+        <h2>Licenses expiring in the next 30 days</h2>
+        {% if summary.expiring_licenses %}
+        <table class="data">
+            <thead>
+                <tr><th>Organization</th><th>Product / edition</th><th>Expires</th><th>Seats</th></tr>
+            </thead>
+            <tbody>
+            {% for license in summary.expiring_licenses %}
+                <tr>
+                    <td><a href="{{ url_for('organizations.detail', organization_id=license.organization_id) }}">{{ license.organization.name }}</a></td>
+                    <td><a href="{{ url_for('licenses.detail', license_id=license.id) }}">{{ license.product.code }} / {{ license.edition.name }}</a></td>
+                    <td>{{ license.expires_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ license.seat_limit }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No licenses expiring soon.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

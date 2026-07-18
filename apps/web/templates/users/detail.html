@@ -1,0 +1,116 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ target.display_name }} — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card wide">
+    <h1>{{ target.display_name }} <span class="badge status-{{ target.status.value }}">{{ target.status.value }}</span></h1>
+
+    <div class="section">
+        <h2>Overview</h2>
+        <p><strong>Email:</strong> {{ target.email }}</p>
+        <p><strong>Vendor role:</strong> {{ target.vendor_role.value if target.vendor_role else "—" }}</p>
+        <p><strong>Last login:</strong> {{ target.last_login_at.strftime('%Y-%m-%d %H:%M') if target.last_login_at else "Never" }}</p>
+        <p><strong>Email verified:</strong> {{ "Yes" if target.email_verified_at else "No" }}</p>
+    </div>
+
+    <div class="section">
+        <h2>Memberships</h2>
+        {% if memberships %}
+        <table class="data">
+            <thead><tr><th>Organization</th><th>Role</th></tr></thead>
+            <tbody>
+            {% for membership in memberships %}
+                <tr>
+                    <td><a href="{{ url_for('organizations.detail', organization_id=membership.organization_id) }}">{{ membership.organization.name }}</a></td>
+                    <td>{{ membership.role.value }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">Not a member of any organization.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Seats</h2>
+        {% if seats %}
+        <table class="data">
+            <thead><tr><th>License</th><th>Organization</th><th>Assigned</th></tr></thead>
+            <tbody>
+            {% for seat in seats %}
+                <tr>
+                    <td><a href="{{ url_for('licenses.detail', license_id=seat.organization_license_id) }}">{{ seat.organization_license.product.code }} / {{ seat.organization_license.edition.name }}</a></td>
+                    <td>{{ seat.organization_license.organization.name }}</td>
+                    <td>{{ seat.assigned_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No seats assigned.</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Devices</h2>
+        {% if devices %}
+        <table class="data">
+            <thead><tr><th>Device</th><th>Status</th><th>Activated</th></tr></thead>
+            <tbody>
+            {% for device in devices %}
+                <tr>
+                    <td>{{ device.display_name or "—" }}</td>
+                    <td><span class="badge status-{{ device.status.value }}">{{ device.status.value }}</span></td>
+                    <td>{{ device.activated_at.strftime('%Y-%m-%d') if device.activated_at else "—" }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">No devices activated yet.</p>
+        {% endif %}
+    </div>
+
+    {% if can_write %}
+    <div class="section">
+        <h2>Security</h2>
+
+        <div class="button-row">
+            {% if target.status.value == 'active' %}
+            <form method="post" action="{{ url_for('users.disable', user_id=target.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger">Disable account</button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url_for('users.reactivate', user_id=target.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-secondary">Reactivate account</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <h2 style="margin-top:24px;">Set new password</h2>
+        <form method="post" action="{{ url_for('users.set_password', user_id=target.id) }}">
+            {{ password_form.hidden_tag() }}
+            <label>New password
+                {{ password_form.new_password() }}
+                {% for e in password_form.new_password.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+            </label>
+            <button type="submit" class="btn btn-primary">Set password</button>
+        </form>
+
+        <h2 style="margin-top:24px;">Vendor role</h2>
+        <form method="post" action="{{ url_for('users.set_vendor_role', user_id=target.id) }}" class="button-row">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="vendor_role">
+                <option value="" {% if not target.vendor_role %}selected{% endif %}>None</option>
+                {% for role in vendor_roles %}
+                <option value="{{ role.value }}" {% if target.vendor_role == role %}selected{% endif %}>{{ role.value }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-secondary">Update role</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

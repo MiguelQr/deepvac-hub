@@ -1,0 +1,35 @@
+{% extends "shared/base.html" %}
+{% block title %}New license — deepvac Licensing{% endblock %}
+{% block content %}
+<div class="card narrow">
+    <h1>New license</h1>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        <label>Product / edition
+            {{ form.product_edition() }}
+            {% for e in form.product_edition.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </label>
+        <label>Seat limit
+            {{ form.seat_limit() }}
+            {% for e in form.seat_limit.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </label>
+        <label>Device limit per user
+            {{ form.device_limit_per_user() }}
+            {% for e in form.device_limit_per_user.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </label>
+        <label>Starts at
+            {{ form.starts_at() }}
+            {% for e in form.starts_at.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </label>
+        <label>Expires at
+            {{ form.expires_at() }}
+            {% for e in form.expires_at.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </label>
+        <label>Offline validity (days)
+            {{ form.offline_validity_days() }}
+            {% for e in form.offline_validity_days.errors %}<span class="field-error">{{ e }}</span>{% endfor %}
+        </label>
+        <button type="submit" class="btn btn-primary">Create license</button>
+    </form>
+</div>
+{% endblock %}

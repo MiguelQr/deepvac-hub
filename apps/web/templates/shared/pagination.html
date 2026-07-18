@@ -1,0 +1,15 @@
+{% if page_result.pages > 1 %}
+<div class="pagination">
+    {% if page_result.has_prev %}
+    <a href="{{ url_for(request.endpoint, page=page_result.page - 1, q=q, status=status) }}">&larr; Prev</a>
+    {% else %}
+    <span class="disabled">&larr; Prev</span>
+    {% endif %}
+    <span>Page {{ page_result.page }} of {{ page_result.pages }}</span>
+    {% if page_result.has_next %}
+    <a href="{{ url_for(request.endpoint, page=page_result.page + 1, q=q, status=status) }}">Next &rarr;</a>
+    {% else %}
+    <span class="disabled">Next &rarr;</span>
+    {% endif %}
+</div>
+{% endif %}

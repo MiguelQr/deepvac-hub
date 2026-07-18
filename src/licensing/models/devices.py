@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, LargeBinary, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from licensing.database import Base
 from licensing.models.enums import DeviceActivationStatus
 from licensing.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin, pg_enum
+
+if TYPE_CHECKING:
+    from licensing.models.users import User
 
 
 class DeviceActivation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -47,6 +51,8 @@ class DeviceActivation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     revocation_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<DeviceActivation {self.id} user={self.user_id} status={self.status}>"

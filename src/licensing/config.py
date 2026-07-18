@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     management_base_url: str = Field(alias="MANAGEMENT_BASE_URL")
 
     session_cookie_secure: bool = Field(default=True, alias="SESSION_COOKIE_SECURE")
+    session_idle_timeout_minutes: int = Field(default=60, alias="SESSION_IDLE_TIMEOUT_MINUTES")
     trusted_proxy_count: int = Field(default=1, alias="TRUSTED_PROXY_COUNT")
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pip show jinja2 flask flask-wtf wtforms werkzeug itsdangerous)",
+      "Bash(python -m pip --version)",
+      "Bash(docker compose *)",
+      "Bash(wsl --list --quiet)",
+      "Bash(wsl -e bash -lc \"which python3; python3 --version\")",
+      "Bash(tasklist)",
+      "Read(//c/Program Files/Docker/Docker/**)",
+      "Bash(\"/c/Program Files/Docker/Docker/Docker Desktop.exe\")",
+      "Bash(disown)",
+      "Bash(curl -s -c /tmp/cookies.txt http://localhost:8080/login)",
+      "Bash(curl -s -b /tmp/cookies.txt -o /tmp/dashboard.html -w \"dashboard status: %{http_code}\\\\n\" http://localhost:8080/dashboard)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -b /tmp/cookies.txt -w \"\\\\nGET /organizations/new status: %{http_code}\\\\n\" http://localhost:8080/organizations/new -o /tmp/new_org_page.html)",
+      "Bash(grep -iE \"error|csrf\" /tmp/org_resp.html | head -20)",
+      "Bash(rm -f /tmp/cookies.txt /tmp/h.txt)",
+      "Bash(curl -sv -c /tmp/cookies.txt http://localhost:8080/login -o /tmp/login_page.html)",
+      "Bash(grep -iE \"error|csrf|field-error\" /tmp/org_resp.html | head -20)",
+      "Bash(awk -F'\\\\t' '{print $7}')",
+      "Bash(docker compose run --rm -v /tmp/cookieval.txt:/tmp/cookieval.txt tools python -c ' *)",
+      "Bash(cat /tmp/pw_resp.html)",
+      "Bash(JAR=/tmp/cookies2.txt *)",
+      "Bash(docker compose exec web sh -c ' *)"
+    ]
+  }
+}
