@@ -1,14 +1,10 @@
 # Deepvac Hub
 
-This app is the cloud licensing control plane for the deepvac-insight
+This app is the cloud licensing control for the deepvac-insight
 desktop application: identity, organizations, device activation, and
 cryptographic license issuance. A license is a lifetime grant to an
 organization — every active member is entitled to the licensed
-product/edition, with no per-seat limit, and no renewal or revocation flow
-once a device has activated.
-
-This service never stores experiment files, names, metadata, measurements,
-channels, annotations, or customer project data.
+product/edition, with no renewal or revocation.
 
 Full design docs: [architecture](docs/architecture.md) ·
 [database ERD](docs/database-erd.md) · [sequences](docs/sequences.md) ·
@@ -114,15 +110,13 @@ and the honest limits of long-lived offline license validity. Full table:
   desktop client verifies certificates against.
 * Entitlement at activation time: the requesting user must have an active
   membership in the approving organization, and that organization must
-  have an active license for the requested product/edition — no seat
-  limit, every active member qualifies. `device_limit_per_user` (default
+  have an active license for the requested product/edition. `device_limit_per_user` (default
   3) is the only per-user cap.
 * Issued certificates are valid for `OrganizationLicense.offline_validity_days`
-  from issuance (default ~36500 days) — a lifetime grant, independent of
-  the organization license's own `expires_at`.
+  from issuance (default ~36500 days).
 * `apps/api/error_handlers.py` maps domain exceptions
   (`src/licensing/exceptions.py`) to HTTP status codes via a status map
-  shared with the Flask side, so the two surfaces can't drift.
+  shared with the Flask side.
 
 ## Admin portal (`apps/web`)
 
@@ -178,15 +172,11 @@ reachable PostgreSQL via `TEST_DATABASE_URL`/`DATABASE_URL`);
 
 * User-code format for activation: 8 uppercase-alphanumeric characters
   (Crockford-safe alphabet, excludes ambiguous characters), grouped
-  `XXXX-XXXX`, hashed with HMAC-SHA256 + server-side pepper — not Argon2id,
-  since its deliberate slowness is counterproductive for a high-volume
-  polling lookup. Guessing defense today is code entropy plus a short TTL;
-  request rate limiting is not implemented (see `docs/threat-model.md`
+  `XXXX-XXXX`, hashed with HMAC-SHA256 + server-side pepper (see `docs/threat-model.md`
   threat #4).
 * Flask session storage uses signed cookies (Flask's built-in,
   itsdangerous-based) rather than server-side sessions.
 * Admin-initiated password reset sets the new password directly — no
   forced-change flow, no email dependency (this app has no mail sender).
 * Certificate validity (`offline_validity_days`) is independent of the
-  organization license's own `expires_at` — a lifetime grant shouldn't
-  retroactively shrink if an admin later edits the license record.
+  organization license's own `expires_at`.
